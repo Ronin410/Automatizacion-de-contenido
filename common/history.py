@@ -70,3 +70,25 @@ def ultimo_nicho(ruta: str | Path) -> str | None:
     if not historial:
         return None
     return historial[-1].get("nicho")
+
+
+def ultima_entrada(ruta: str | Path) -> dict[str, Any] | None:
+    """Devuelve la última entrada registrada (el guion más reciente), o None si no hay historial."""
+    historial = _cargar(Path(ruta))
+    return historial[-1] if historial else None
+
+
+def actualizar_ultima_entrada(ruta: str | Path, campos: dict[str, Any]) -> None:
+    """Mezcla `campos` en la última entrada del historial (por ejemplo, la ruta del video final).
+
+    No falla si el historial está vacío: en ese caso no hace nada, solo avisa por log.
+    """
+    ruta = Path(ruta)
+    historial = _cargar(ruta)
+    if not historial:
+        logger.warning("No hay entradas en el historial (%s) para actualizar; se omite.", ruta)
+        return
+    historial[-1].update(campos)
+    with ruta.open("w", encoding="utf-8") as f:
+        json.dump(historial, f, ensure_ascii=False, indent=2)
+    logger.info("Última entrada del historial actualizada con: %s", list(campos.keys()))

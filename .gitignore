@@ -9,12 +9,15 @@ config/settings.yaml
 # Contenido generado en cada corrida (no es código del proyecto)
 logs/*.log
 output/*.txt
+output/*.srt
 output_videos/*
 input_audio/*
 history/*.json
+assets/broll_temp/*
 
 !logs/.gitkeep
 !output/.gitkeep
 !output_videos/.gitkeep
 !input_audio/.gitkeep
 !history/.gitkeep
+!assets/broll_temp/.gitkeep

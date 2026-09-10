@@ -1,10 +1,12 @@
-# Etapa 1 (01_generate_script.py) — implementada
+# Fase 1 (MVP local) — todo implementado
 groq
 pyyaml
 tenacity
-
-# Etapas siguientes (02_finalizar.py y watcher) — todavía no implementadas
 faster-whisper
 moviepy
 requests
 watchdog
+
+# Fase 2 (publicación) — todavía no implementada
+# google-api-python-client
+# facebook-sdk

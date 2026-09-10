@@ -20,12 +20,28 @@ guion:
 
 broll:
   proveedor: pexels              # pexels | pixabay
-  api_key: "${PEXELS_API_KEY}"
+  api_key: "${PEXELS_API_KEY}"   # o PIXABAY_API_KEY si proveedor: pixabay
   clips_por_video: [3, 5]
+  max_reintentos: 3
+
+whisper:
+  modelo: small        # tiny | base | small | medium (más grande = más preciso y más lento)
+  idioma: es
+  device: cpu
+  compute_type: int8
 
 video:
   formato: vertical               # 1080x1920
+  ancho: 1080
+  alto: 1920
+  fps: 30
   subtitulos_estilo: simple        # simple | karaoke (fase 3)
+  fuente: null                     # ruta a un .ttf/.otf en assets/fonts/, o null para la default
+  tam_fuente: 64
+  color_texto: white
+  color_borde: black
+  intro: "assets/intro_outro/intro.mp4"   # opcional; se omite si el archivo no existe
+  outro: "assets/intro_outro/outro.mp4"   # opcional; se omite si el archivo no existe
 
 historial:
   ruta: "history/historial_guiones.json"

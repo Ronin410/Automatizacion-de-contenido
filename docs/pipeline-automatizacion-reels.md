@@ -98,11 +98,13 @@ content-pipeline/
 
 ## 6. Fases de implementación
 
-### Fase 1 — MVP local (sin publicación automática)
+### Fase 1 — MVP local (sin publicación automática) — ✅ implementada
 1. `01_generate_script.py`: acepta un tema/idea opcional (`--idea`) o usa la rotación entre los 4 nichos; genera 3 guiones candidatos con Groq, calcula la duración estimada de cada uno y descarta/marca los que no entran en 60-90s, deja elegir uno, y lo guarda en `output/guion_del_dia.txt`. Registra la elección en `history/historial_guiones.json` para no repetir subtemas recientes. 🆕
 2. **Pausa manual**: el usuario graba su voz leyendo el guion y guarda el audio en `input_audio/` (o deja corriendo `watch_audio.py` para que el siguiente paso se dispare solo). 🆕
-3. `02_finalizar.py`: detecta el audio más reciente, transcribe con Whisper (subtítulos con timestamps), busca 3-5 clips/imágenes relevantes según palabras clave del guion, y ensambla todo en un video vertical con subtítulos incrustados. Cada llamada externa (Groq si hace falta reintentar, Pexels/Pixabay) usa reintentos con backoff, y cada corrida queda registrada en `logs/`. 🆕
-4. Salida a carpeta `output_videos/` para revisión manual antes de subir.
+3. `02_finalizar.py`: detecta el audio más reciente, transcribe con Whisper (subtítulos con timestamps, `02_transcribe.py`), busca 3-5 clips/imágenes relevantes según las palabras clave que ya generó Groq en el paso 1 (`03_fetch_broll.py`), y ensambla todo en un video vertical con subtítulos incrustados (`04_assemble_video.py`, MoviePy 2.x — los subtítulos se renderizan con `TextClip`, que en esta versión de MoviePy usa Pillow por dentro y **no requiere tener ImageMagick instalado**). Cada llamada externa (Groq si hace falta reintentar, Pexels/Pixabay) usa reintentos con backoff, y cada corrida queda registrada en `logs/`. 🆕
+4. Salida a carpeta `output_videos/` para revisión manual antes de subir. La ruta del video final y la fecha quedan registradas de vuelta en `history/historial_guiones.json`, junto al guion que le dio origen. 🆕
+
+Código: `scripts/01_generate_script.py` … `scripts/04_assemble_video.py`, `scripts/watch_audio.py`, `common/`. Probado end-to-end con audio/imágenes sintéticos y las APIs externas mockeadas (sin gastar cuota real de Groq/Pexels).
 
 ### Fase 2 — Publicación semi-automática
 1. Integración con YouTube Data API para subir video + título + descripción + tags generados.
