@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Config real con API keys — usar config/settings.example.yaml como plantilla
+config/settings.yaml
+
+# Contenido generado en cada corrida (no es código del proyecto)
+logs/*.log
+output/*.txt
+output_videos/*
+input_audio/*
+history/*.json
+
+!logs/.gitkeep
+!output/.gitkeep
+!output_videos/.gitkeep
+!input_audio/.gitkeep
+!history/.gitkeep

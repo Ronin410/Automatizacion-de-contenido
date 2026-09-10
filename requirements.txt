@@ -1,0 +1,10 @@
+# Etapa 1 (01_generate_script.py) — implementada
+groq
+pyyaml
+tenacity
+
+# Etapas siguientes (02_finalizar.py y watcher) — todavía no implementadas
+faster-whisper
+moviepy
+requests
+watchdog

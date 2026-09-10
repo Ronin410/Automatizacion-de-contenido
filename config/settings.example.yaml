@@ -1,0 +1,36 @@
+# Copiá este archivo a settings.yaml (en la misma carpeta) y completá tu API key
+# de Groq, o simplemente definí la variable de entorno GROQ_API_KEY y dejá
+# groq_api_key vacío/como placeholder — el código prioriza la variable de entorno.
+#
+#   cp config/settings.example.yaml config/settings.yaml
+#
+# settings.yaml está en .gitignore: no se sube al repo con tu API key real.
+
+llm:
+  provider: groq
+  groq_api_key: "${GROQ_API_KEY}"   # o pegá tu key acá directamente
+  modelo: "llama-3.1-8b-instant"
+  candidatos_por_ejecucion: 3
+  max_reintentos: 3
+
+guion:
+  palabras_por_minuto: 150       # para estimar duración de narración
+  duracion_objetivo_seg: [60, 90]
+  nichos: [tecnologia, programacion, videojuegos, peliculas]
+
+broll:
+  proveedor: pexels              # pexels | pixabay
+  api_key: "${PEXELS_API_KEY}"
+  clips_por_video: [3, 5]
+
+video:
+  formato: vertical               # 1080x1920
+  subtitulos_estilo: simple        # simple | karaoke (fase 3)
+
+historial:
+  ruta: "history/historial_guiones.json"
+  evitar_repetir_dias: 14
+
+logging:
+  ruta: "logs/"
+  nivel: INFO
