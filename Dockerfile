@@ -13,4 +13,7 @@ RUN pip install --no-cache-dir -r requirements-webapp.txt
 COPY . .
 
 EXPOSE 8000
-CMD ["uvicorn", "webapp.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Forma shell (no exec) para que ${PORT} se expanda: Render (y otros PaaS)
+# asignan el puerto dinámico vía esa variable de entorno; localmente/en
+# docker-compose no está seteada, así que cae al 8000 de siempre.
+CMD uvicorn webapp.main:app --host 0.0.0.0 --port ${PORT:-8000}
