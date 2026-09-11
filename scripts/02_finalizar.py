@@ -18,13 +18,12 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import yaml
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = BASE_DIR / "scripts"
 sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
+from common.config import cargar_config  # noqa: E402
 from common.history import actualizar_ultima_entrada, ultima_entrada  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
 
@@ -36,16 +35,6 @@ broll_mod = importlib.import_module("03_fetch_broll")
 assemble_mod = importlib.import_module("04_assemble_video")
 
 AUDIO_EXTENSIONES = {".wav", ".mp3", ".m4a", ".ogg", ".flac"}
-
-
-def cargar_config(ruta: Path) -> dict:
-    if not ruta.exists():
-        ejemplo = ruta.parent / "settings.example.yaml"
-        raise FileNotFoundError(
-            f"No existe {ruta}. Copiá {ejemplo.name} a {ruta.name} y completá tus API keys."
-        )
-    with ruta.open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
 
 
 def audio_mas_reciente(carpeta: Path) -> Path:

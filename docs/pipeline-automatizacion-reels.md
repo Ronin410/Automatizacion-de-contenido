@@ -1,6 +1,8 @@
 # Pipeline de Automatización de Contenido — Reels/Shorts (YouTube + Facebook)
 
 > **v2** — Documento de diseño revisado. Se resolvieron las preguntas abiertas de la v1 y se incorporaron mejoras (selección interactiva de guion, validación de duración, manejo de errores, watcher automático e historial de temas). Los cambios respecto a la v1 están marcados con 🆕.
+>
+> **v3** — Se agregó una webapp (`webapp/`) para poder usar el pipeline sin depender de la computadora local: pedís el guion, elegís candidato, subís el audio grabado y descargás el video, todo desde el navegador (celu incluido). Pensada para desplegarse en una VM siempre gratis (ver `docs/deploy-oracle-cloud-free-tier.md`). Ver §11.
 
 ## 1. Objetivo del proyecto
 
@@ -174,3 +176,29 @@ logging:
   ruta: "logs/"
   nivel: INFO
 ```
+
+## 11. Acceso remoto — webapp (v3) 🆕
+
+Los scripts de CLI (`01_generate_script.py`, `02_finalizar.py`) siguen existiendo igual y siguen andando en tu compu. Además, `webapp/` expone la misma lógica como una API + página web mínima, para poder usar el pipeline desde cualquier lugar sin depender de que tu compu esté prendida:
+
+1. Abrís la página, pegás un token de acceso (candado simple, ver más abajo).
+2. Pedís un guion (con o sin idea puntual) → el LLM te da varios candidatos.
+3. Elegís uno → te muestra el texto para que lo grabes con lo que tengas a mano (celu, Audacity, etc.).
+4. Subís el archivo de audio grabado → se procesa en background (Whisper + B-roll + MoviePy), un audio a la vez para no quedarse sin RAM.
+5. Cuando termina, descargás el video final.
+
+**No hay una segunda implementación del pipeline**: `webapp/main.py` reusa exactamente los mismos módulos de `common/` y los mismos scripts numerados (`02_transcribe.py`, `03_fetch_broll.py`, `04_assemble_video.py`) que ya usa la CLI.
+
+### Por qué no un PaaS con tier gratis (Render/Railway/etc.)
+
+Whisper y MoviePy necesitan RAM y CPU sostenida por varios minutos. Los tiers gratuitos típicos tienen RAM chica, cortan requests largos, y borran el disco en cada redeploy — alto riesgo de que el video se corte a mitad de proceso. En cambio, una **VM siempre gratis** (recomendado: Oracle Cloud Free Tier, hasta 4 OCPU ARM + 24GB RAM sin costo) no tiene esos límites. La app queda en Docker, así que si más adelante conviene otro hosting, se mueve sin reescribir nada — ver `docs/deploy-oracle-cloud-free-tier.md` para el paso a paso.
+
+### Seguridad
+
+La webapp queda expuesta a internet, así que todos los endpoints requieren un header `X-Api-Token` que coincida con la variable de entorno `WEBAPP_TOKEN` (candado simple, no es un sistema de usuarios — alcanza para que no cualquiera gaste tu cuota de Groq/Pexels). El despliegue recomendado incluye Caddy como reverse proxy con HTTPS automático (Let's Encrypt), así el token nunca viaja en texto plano por la red.
+
+### Limitaciones conocidas (a mejorar en una iteración futura)
+
+- El estado de los trabajos en curso vive en memoria: un reinicio del contenedor a mitad de un procesamiento pierde ese trabajo puntual (el audio se puede volver a subir).
+- Los guiones candidatos generados y no elegidos se descartan solos después de 1 hora.
+- Un solo usuario/token para toda la instancia — para un equipo con varias personas grabando, habría que sumar un sistema de usuarios real.

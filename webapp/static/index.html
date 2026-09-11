@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pipeline de Reels</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --borde: #2a2e38;
+    --texto: #e8e9ec;
+    --texto-tenue: #9aa0ab;
+    --acento: #5b8cff;
+    --ok: #3ecf8e;
+    --warn: #e0a63e;
+    --error: #e85d5d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    padding-bottom: 48px;
+    background: var(--bg);
+    color: var(--texto);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+  h1 { font-size: 1.3rem; margin-bottom: 4px; }
+  p.subtitulo { color: var(--texto-tenue); margin-top: 0; font-size: 0.9rem; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  section[hidden] { display: none; }
+  h2 { font-size: 1rem; margin-top: 0; }
+  label { display: block; font-size: 0.85rem; color: var(--texto-tenue); margin-bottom: 4px; margin-top: 10px; }
+  input[type="text"], input[type="password"], select, input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--borde);
+    background: #0c0e12;
+    color: var(--texto);
+    font-size: 0.95rem;
+  }
+  button {
+    margin-top: 14px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--acento);
+    color: white;
+    font-size: 0.95rem;
+    cursor: pointer;
+    width: 100%;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secundario { background: #2a2e38; }
+  .candidato {
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .candidato-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .candidato-titulo { font-weight: 600; }
+  .badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .badge.ok { background: rgba(62,207,142,0.15); color: var(--ok); }
+  .badge.fuera { background: rgba(224,166,62,0.15); color: var(--warn); }
+  .guion-texto { white-space: pre-wrap; font-size: 0.9rem; color: var(--texto); margin: 8px 0; max-height: 220px; overflow-y: auto; }
+  .palabras-clave { font-size: 0.8rem; color: var(--texto-tenue); }
+  .estado-linea { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-top: 10px; }
+  .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--texto-tenue); }
+  .punto.procesando { background: var(--warn); }
+  .punto.listo { background: var(--ok); }
+  .punto.error { background: var(--error); }
+  .mensaje-error { color: var(--error); font-size: 0.85rem; margin-top: 8px; }
+  .oculto { display: none; }
+  small.ayuda { color: var(--texto-tenue); display: block; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>Pipeline de Reels</h1>
+<p class="subtitulo">Guion → grabás → subís el audio → video listo para revisar.</p>
+
+<section>
+  <h2>Token de acceso</h2>
+  <label for="token">X-Api-Token</label>
+  <input type="password" id="token" placeholder="Pegá tu token" />
+  <small class="ayuda">Se guarda solo en este navegador (localStorage), no se manda a ningún lado más que a este servidor.</small>
+</section>
+
+<section id="seccion-generar">
+  <h2>1. Guion</h2>
+  <label for="idea">Idea puntual (opcional)</label>
+  <input type="text" id="idea" placeholder="Ej: un bug clásico de C++" />
+  <label for="nicho">Nicho (opcional, si no se elige rota automático)</label>
+  <select id="nicho">
+    <option value="">Automático (rotación)</option>
+    <option value="tecnologia">Tecnología</option>
+    <option value="programacion">Programación</option>
+    <option value="videojuegos">Videojuegos</option>
+    <option value="peliculas">Películas</option>
+  </select>
+  <button id="btn-generar">Generar guiones candidatos</button>
+  <div id="mensaje-generar" class="mensaje-error oculto"></div>
+</section>
+
+<section id="seccion-candidatos" hidden>
+  <h2>2. Elegí un guion</h2>
+  <div id="lista-candidatos"></div>
+</section>
+
+<section id="seccion-elegido" hidden>
+  <h2>3. Grabá esto</h2>
+  <p><strong id="titulo-elegido"></strong></p>
+  <div class="guion-texto" id="texto-elegido"></div>
+  <small class="ayuda">Grabalo con el celu, Audacity, lo que tengas — después subí el archivo abajo.</small>
+</section>
+
+<section id="seccion-audio" hidden>
+  <h2>4. Subí tu narración</h2>
+  <label for="archivo-audio">Audio (.wav, .mp3, .m4a, .ogg, .flac)</label>
+  <input type="file" id="archivo-audio" accept=".wav,.mp3,.m4a,.ogg,.flac,audio/*" />
+  <button id="btn-subir">Subir y procesar</button>
+  <div id="mensaje-audio" class="mensaje-error oculto"></div>
+
+  <div id="estado-proceso" class="oculto">
+    <div class="estado-linea">
+      <span class="punto" id="punto-estado"></span>
+      <span id="texto-estado">En cola...</span>
+    </div>
+    <button id="btn-descargar" class="secundario oculto">Descargar video</button>
+  </div>
+</section>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function token() {
+    return $("token").value.trim();
+  }
+
+  // recordar el token entre visitas (mismo navegador)
+  $("token").value = localStorage.getItem("api_token") || "";
+  $("token").addEventListener("change", () => localStorage.setItem("api_token", token()));
+
+  async function llamar(path, opciones = {}) {
+    const headers = opciones.headers || {};
+    headers["X-Api-Token"] = token();
+    const resp = await fetch(path, { ...opciones, headers });
+    if (!resp.ok) {
+      let detalle = resp.statusText;
+      try {
+        const data = await resp.json();
+        detalle = data.detail || detalle;
+      } catch (_) { /* respuesta no era JSON */ }
+      throw new Error(detalle);
+    }
+    return resp;
+  }
+
+  let generadoId = null;
+  let jobId = null;
+  let temporizadorPoll = null;
+
+  $("btn-generar").addEventListener("click", async () => {
+    const boton = $("btn-generar");
+    const msg = $("mensaje-generar");
+    msg.classList.add("oculto");
+    if (!token()) { msg.textContent = "Pegá tu token primero."; msg.classList.remove("oculto"); return; }
+
+    boton.disabled = true;
+    boton.textContent = "Generando (puede tardar unos segundos)...";
+    try {
+      const form = new FormData();
+      if ($("idea").value.trim()) form.append("idea", $("idea").value.trim());
+      if ($("nicho").value) form.append("nicho", $("nicho").value);
+
+      const resp = await llamar("/api/guiones/generar", { method: "POST", body: form });
+      const data = await resp.json();
+      generadoId = data.generado_id;
+      renderCandidatos(data);
+    } catch (err) {
+      msg.textContent = "Error: " + err.message;
+      msg.classList.remove("oculto");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Generar guiones candidatos";
+    }
+  });
+
+  function renderCandidatos(data) {
+    const [min, max] = data.rango_objetivo_seg;
+    const cont = $("lista-candidatos");
+    cont.innerHTML = "";
+    data.candidatos.forEach((c) => {
+      const div = document.createElement("div");
+      div.className = "candidato";
+      const badgeClase = c.dentro_de_rango ? "ok" : "fuera";
+      const badgeTexto = c.dentro_de_rango ? "OK" : "fuera de rango";
+      div.innerHTML = `
+        <div class="candidato-header">
+          <span class="candidato-titulo">${escapeHtml(c.titulo)}</span>
+          <span class="badge ${badgeClase}">~${c.duracion_estimada_seg}s (${badgeTexto}, objetivo ${min}-${max}s)</span>
+        </div>
+        <div class="guion-texto">${escapeHtml(c.guion)}</div>
+        <div class="palabras-clave">${c.palabras_clave.map(escapeHtml).join(", ")}</div>
+        <button data-indice="${c.indice}">Elegir este</button>
+      `;
+      div.querySelector("button").addEventListener("click", () => elegirCandidato(c.indice));
+      cont.appendChild(div);
+    });
+    $("seccion-candidatos").hidden = false;
+    $("seccion-candidatos").scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function elegirCandidato(indice) {
+    const form = new FormData();
+    form.append("generado_id", generadoId);
+    form.append("indice", indice);
+    const resp = await llamar("/api/guiones/elegir", { method: "POST", body: form });
+    const data = await resp.json();
+
+    $("titulo-elegido").textContent = data.titulo + ` (~${data.duracion_estimada_seg}s)`;
+    $("texto-elegido").textContent = data.guion;
+    $("seccion-elegido").hidden = false;
+    $("seccion-audio").hidden = false;
+    $("seccion-elegido").scrollIntoView({ behavior: "smooth" });
+  }
+
+  $("btn-subir").addEventListener("click", async () => {
+    const boton = $("btn-subir");
+    const msg = $("mensaje-audio");
+    msg.classList.add("oculto");
+    const archivo = $("archivo-audio").files[0];
+    if (!archivo) { msg.textContent = "Elegí un archivo de audio primero."; msg.classList.remove("oculto"); return; }
+
+    boton.disabled = true;
+    boton.textContent = "Subiendo...";
+    try {
+      const form = new FormData();
+      form.append("archivo", archivo);
+      const resp = await llamar("/api/audio/subir", { method: "POST", body: form });
+      const data = await resp.json();
+      jobId = data.job_id;
+      $("estado-proceso").classList.remove("oculto");
+      $("btn-descargar").classList.add("oculto");
+      iniciarPolling();
+    } catch (err) {
+      msg.textContent = "Error: " + err.message;
+      msg.classList.remove("oculto");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Subir y procesar";
+    }
+  });
+
+  function iniciarPolling() {
+    if (temporizadorPoll) clearInterval(temporizadorPoll);
+    consultarEstado();
+    temporizadorPoll = setInterval(consultarEstado, 5000);
+  }
+
+  const TEXTOS_ESTADO = {
+    en_cola: "En cola (esperando que termine el anterior, si hay)...",
+    procesando: "Procesando (transcribiendo, buscando B-roll y armando el video)...",
+    listo: "¡Listo!",
+    error: "Falló el procesamiento.",
+  };
+
+  async function consultarEstado() {
+    try {
+      const resp = await llamar(`/api/procesos/${jobId}`);
+      const data = await resp.json();
+      $("punto-estado").className = "punto " + data.estado;
+      $("texto-estado").textContent = TEXTOS_ESTADO[data.estado] || data.estado;
+
+      if (data.estado === "listo") {
+        clearInterval(temporizadorPoll);
+        $("btn-descargar").classList.remove("oculto");
+      } else if (data.estado === "error") {
+        clearInterval(temporizadorPoll);
+        $("texto-estado").textContent += " " + (data.error || "");
+      }
+    } catch (err) {
+      $("texto-estado").textContent = "Error consultando estado: " + err.message;
+    }
+  }
+
+  $("btn-descargar").addEventListener("click", async () => {
+    const resp = await llamar(`/api/videos/${jobId}`);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `reel_${jobId}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  });
+
+  function escapeHtml(texto) {
+    const div = document.createElement("div");
+    div.textContent = texto;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>

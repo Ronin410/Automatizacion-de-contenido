@@ -1,0 +1,5 @@
+# Todo lo de los scripts de CLI, más lo necesario para exponerlo como webapp.
+-r requirements.txt
+fastapi
+uvicorn[standard]
+python-multipart

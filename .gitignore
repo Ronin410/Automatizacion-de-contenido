@@ -3,8 +3,9 @@ __pycache__/
 .venv/
 venv/
 
-# Config real con API keys — usar config/settings.example.yaml como plantilla
+# Config real con API keys — usar config/settings.example.yaml y .env.example como plantillas
 config/settings.yaml
+.env
 
 # Contenido generado en cada corrida (no es código del proyecto)
 logs/*.log

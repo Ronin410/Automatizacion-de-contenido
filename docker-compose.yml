@@ -1,0 +1,35 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Estado persistente: sin esto, cada `docker compose up --build` borra
+      # tus guiones, videos, historial y config (el contenedor es efímero).
+      - ./config:/app/config
+      - ./input_audio:/app/input_audio
+      - ./output:/app/output
+      - ./output_videos:/app/output_videos
+      - ./history:/app/history
+      - ./logs:/app/logs
+      - ./assets/broll_temp:/app/assets/broll_temp
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

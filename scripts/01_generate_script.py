@@ -17,42 +17,14 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-import yaml
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from common.history import registrar_guion, temas_recientes, ultimo_nicho  # noqa: E402
+from common.config import cargar_config  # noqa: E402
+from common.guion import NICHOS_DEFAULT, elegir_nicho_por_rotacion, estimar_duracion_seg  # noqa: E402
+from common.history import registrar_guion, temas_recientes  # noqa: E402
 from common.llm_client import Candidato, GroqScriptClient, LLMResponseError  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
-
-NICHOS_DEFAULT = ["tecnologia", "programacion", "videojuegos", "peliculas"]
-
-
-def cargar_config(ruta: Path) -> dict:
-    if not ruta.exists():
-        ejemplo = ruta.parent / "settings.example.yaml"
-        raise FileNotFoundError(
-            f"No existe {ruta}. Copiá {ejemplo.name} a {ruta.name} en la misma carpeta "
-            "y completá tu API key de Groq (o definí la variable de entorno GROQ_API_KEY)."
-        )
-    with ruta.open("r", encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
-
-
-def elegir_nicho_por_rotacion(nichos: list[str], historial_ruta: Path) -> str:
-    """Rotación fija: el siguiente nicho en la lista después del último usado."""
-    ultimo = ultimo_nicho(historial_ruta)
-    if ultimo in nichos:
-        idx = (nichos.index(ultimo) + 1) % len(nichos)
-    else:
-        idx = 0
-    return nichos[idx]
-
-
-def estimar_duracion_seg(texto: str, palabras_por_minuto: int) -> float:
-    n_palabras = len(texto.split())
-    return round((n_palabras / palabras_por_minuto) * 60, 1)
 
 
 def mostrar_candidatos(
