@@ -94,7 +94,7 @@ def main() -> int:
     try:
         cliente = GroqScriptClient(
             api_key=llm_cfg.get("groq_api_key"),
-            modelo=llm_cfg.get("modelo", "llama-3.1-8b-instant"),
+            modelo=llm_cfg.get("modelo", "openai/gpt-oss-20b"),
             max_reintentos=llm_cfg.get("max_reintentos", 3),
         )
     except RuntimeError as exc:

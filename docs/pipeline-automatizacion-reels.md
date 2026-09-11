@@ -150,7 +150,7 @@ Ejemplo orientativo de las claves que el resto del documento asume; se termina d
 llm:
   provider: groq
   groq_api_key: "TU_API_KEY_AQUI"
-  modelo: "llama-3.1-8b-instant"
+  modelo: "openai/gpt-oss-20b"
   candidatos_por_ejecucion: 3
   max_reintentos: 3
 

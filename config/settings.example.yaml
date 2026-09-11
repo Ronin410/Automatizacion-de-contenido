@@ -9,7 +9,7 @@
 llm:
   provider: groq
   groq_api_key: "${GROQ_API_KEY}"   # o pegá tu key acá directamente
-  modelo: "llama-3.1-8b-instant"
+  modelo: "openai/gpt-oss-20b"
   candidatos_por_ejecucion: 3
   max_reintentos: 3
 
