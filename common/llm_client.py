@@ -127,16 +127,32 @@ class GroqScriptClient:
                     model=self._modelo,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.9,
+                    # Generoso a propósito: algunos modelos (ej. los "razonadores" tipo
+                    # gpt-oss) gastan varios cientos/miles de tokens pensando antes de
+                    # escribir la respuesta final; con un límite chico se corta a mitad
+                    # de un string o queda vacía (finish_reason="length").
+                    max_tokens=4096,
                 )
             except Exception as exc:  # noqa: BLE001 - cualquier error de red/API se reintenta y se loguea
                 logger.warning("Fallo llamando a la API de Groq: %s", exc)
                 raise
 
-            contenido = respuesta.choices[0].message.content or ""
+            choice = respuesta.choices[0]
+            contenido = choice.message.content or ""
+            if choice.finish_reason == "length":
+                logger.warning(
+                    "Groq cortó la respuesta por límite de tokens (finish_reason=length, "
+                    "%d caracteres recibidos); se reintenta.", len(contenido),
+                )
+                raise LLMResponseError("Respuesta cortada por límite de tokens (finish_reason=length).")
+
             try:
                 return _parsear_candidatos(contenido)
             except LLMResponseError as exc:
-                logger.warning("Respuesta de Groq no parseable, se reintenta: %s", exc)
+                preview = contenido[:300].replace("\n", " ")
+                logger.warning(
+                    "Respuesta de Groq no parseable, se reintenta: %s (preview: %r)", exc, preview
+                )
                 raise
 
         return _llamar()
