@@ -60,7 +60,14 @@ def pedir_seleccion(cantidad: int) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Genera el guion del día con Groq.")
     parser.add_argument("--idea", help="Tema puntual para el guion (opcional).")
-    parser.add_argument("--nicho", choices=NICHOS_DEFAULT, help="Forzar un nicho puntual (opcional).")
+    parser.add_argument(
+        "--nicho",
+        help=(
+            "Forzar un nicho/categoría puntual (opcional). Puede ser cualquier texto libre "
+            f"(ej. 'astrologia', 'recetas veganas'), no hace falta que esté en la lista de "
+            f"rotación configurada ({', '.join(NICHOS_DEFAULT)}, ...)."
+        ),
+    )
     parser.add_argument(
         "--config",
         default=str(BASE_DIR / "config" / "settings.yaml"),

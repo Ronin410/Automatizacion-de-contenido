@@ -9,7 +9,30 @@ from pathlib import Path
 
 from common.history import ultimo_nicho
 
-NICHOS_DEFAULT = ["tecnologia", "programacion", "videojuegos", "peliculas"]
+# Lista por defecto para la ROTACIÓN AUTOMÁTICA (cuando no se fuerza un nicho
+# puntual). No es una lista cerrada: tanto la CLI (--nicho) como la webapp
+# aceptan cualquier texto libre como override puntual, sin tener que estar
+# en esta lista ni tocar código — útil para que cada persona que use el
+# pipeline (ej. varias personas en la misma familia/equipo) escriba su propio
+# ámbito sin que un dev tenga que agregarlo antes.
+NICHOS_DEFAULT = [
+    "tecnologia",
+    "programacion",
+    "videojuegos",
+    "peliculas",
+    "belleza",
+    "moda",
+    "cocina",
+    "salud_bienestar",
+    "fitness",
+    "finanzas_personales",
+    "viajes",
+    "mascotas",
+    "curiosidades",
+    "motivacion",
+    "humor",
+    "diy_manualidades",
+]
 
 
 def elegir_nicho_por_rotacion(nichos: list[str], historial_ruta: str | Path) -> str:

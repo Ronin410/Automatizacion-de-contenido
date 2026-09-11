@@ -122,6 +122,14 @@ def index() -> str:
     return (Path(__file__).parent / "static" / "index.html").read_text(encoding="utf-8")
 
 
+@app.get("/api/nichos", dependencies=[Depends(verificar_token)])
+def listar_nichos() -> dict:
+    """Nichos configurados (solo como sugerencia: el campo de nicho acepta texto libre)."""
+    config = _config()
+    nichos = (config.get("guion", {}) or {}).get("nichos") or NICHOS_DEFAULT
+    return {"nichos": nichos}
+
+
 @app.post("/api/guiones/generar", dependencies=[Depends(verificar_token)])
 def generar_guiones(idea: str | None = Form(None), nicho: str | None = Form(None)) -> dict:
     _limpiar_pendientes_viejos()
@@ -134,9 +142,9 @@ def generar_guiones(idea: str | None = Form(None), nicho: str | None = Form(None
     evitar_dias = (config.get("historial", {}) or {}).get("evitar_repetir_dias", 14)
 
     nichos = guion_cfg.get("nichos") or NICHOS_DEFAULT
-    if nicho and nicho not in nichos:
-        raise HTTPException(400, f"Nicho inválido: {nicho!r} (opciones: {nichos}).")
-
+    # Texto libre a propósito: no hace falta que esté en `nichos` (esa lista
+    # es solo para la rotación automática cuando no se especifica ninguno).
+    nicho = (nicho or "").strip() or None
     nicho_final = nicho or elegir_nicho_por_rotacion(nichos, historial_ruta)
     evitar = temas_recientes(historial_ruta, nicho_final, dias=evitar_dias)
     palabras_por_minuto = guion_cfg.get("palabras_por_minuto", 150)

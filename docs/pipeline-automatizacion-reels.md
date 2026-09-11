@@ -3,10 +3,12 @@
 > **v2** — Documento de diseño revisado. Se resolvieron las preguntas abiertas de la v1 y se incorporaron mejoras (selección interactiva de guion, validación de duración, manejo de errores, watcher automático e historial de temas). Los cambios respecto a la v1 están marcados con 🆕.
 >
 > **v3** — Se agregó una webapp (`webapp/`) para poder usar el pipeline sin depender de la computadora local: pedís el guion, elegís candidato, subís el audio grabado y descargás el video, todo desde el navegador (celu incluido). Pensada para desplegarse en una VM siempre gratis (ver `docs/deploy-oracle-cloud-free-tier.md`). Ver §11.
+>
+> **v4** — Pensado para más de una persona usando el mismo pipeline con temas distintos: se ampliaron los nichos de rotación automática (de 4 a 16, cubriendo categorías bien genéricas — belleza, cocina, fitness, viajes, etc., no solo tech/gaming) y, más importante, el nicho ya no es una lista cerrada: tanto `--nicho` en la CLI como el campo de la webapp aceptan **cualquier texto libre** como categoría puntual, sin tener que estar configurado de antemano ni tocar código.
 
 ## 1. Objetivo del proyecto
 
-Crear una herramienta en Python que automatice la mayor parte del flujo de creación de videos cortos (reels/shorts) para un canal de YouTube y página de Facebook, en los nichos de **tecnología, programación, videojuegos y películas**, minimizando el tiempo de producción manual (ideas, guion, voz, imágenes, edición).
+Crear una herramienta en Python que automatice la mayor parte del flujo de creación de videos cortos (reels/shorts) para un canal de YouTube y página de Facebook. Pensado originalmente para los nichos de **tecnología, programación, videojuegos y películas**, pero el nicho/categoría es configurable y además acepta texto libre 🆕 — sirve igual para belleza, cocina, viajes, o cualquier otro ámbito que alguien quiera cubrir. El objetivo sigue siendo minimizar el tiempo de producción manual (ideas, guion, voz, imágenes, edición).
 
 ## 2. Restricciones clave
 
@@ -33,7 +35,7 @@ El pipeline se ejecuta en dos pasos separados, con una pausa real en medio para 
 
 1. **`python 01_generate_script.py [--idea "texto libre opcional"]`** 🆕
    - Si se pasa `--idea`, el guion gira alrededor de ese tema puntual (dentro del nicho que corresponda o del nicho indicado con `--nicho`).
-   - Si no se pasa `--idea`, se usa la rotación fija de nicho (tech / programación / gaming / películas) como en la v1.
+   - Si no se pasa `--idea`, se usa la rotación fija entre los nichos configurados (16 por defecto, ver §10) 🆕 — pero `--nicho` acepta cualquier texto libre, no hace falta que esté en esa lista. 🆕
    - Llama a Groq y genera **N candidatos** (por defecto 3, configurable) en vez de un único guion.
    - Para cada candidato calcula la **duración estimada de narración** (palabras ÷ palabras-por-minuto configuradas) y descarta o marca en rojo los que caen fuera del rango objetivo (60-90s por defecto).
    - Muestra los candidatos numerados en pantalla con su duración estimada y palabras clave detectadas, y pide al usuario elegir uno (o regenerar si ninguno convence). Esto sigue siendo una sola ejecución corta — no es la pausa larga de grabación, así que no rompe el flujo de "dos comandos" de la v1.
@@ -101,7 +103,7 @@ content-pipeline/
 ## 6. Fases de implementación
 
 ### Fase 1 — MVP local (sin publicación automática) — ✅ implementada
-1. `01_generate_script.py`: acepta un tema/idea opcional (`--idea`) o usa la rotación entre los 4 nichos; genera 3 guiones candidatos con Groq, calcula la duración estimada de cada uno y descarta/marca los que no entran en 60-90s, deja elegir uno, y lo guarda en `output/guion_del_dia.txt`. Registra la elección en `history/historial_guiones.json` para no repetir subtemas recientes. 🆕
+1. `01_generate_script.py`: acepta un tema/idea opcional (`--idea`) y un nicho/categoría opcional (`--nicho`, texto libre) o usa la rotación entre los nichos configurados; genera 3 guiones candidatos con Groq, calcula la duración estimada de cada uno y descarta/marca los que no entran en 60-90s, deja elegir uno, y lo guarda en `output/guion_del_dia.txt`. Registra la elección en `history/historial_guiones.json` para no repetir subtemas recientes. 🆕
 2. **Pausa manual**: el usuario graba su voz leyendo el guion y guarda el audio en `input_audio/` (o deja corriendo `watch_audio.py` para que el siguiente paso se dispare solo). 🆕
 3. `02_finalizar.py`: detecta el audio más reciente, transcribe con Whisper (subtítulos con timestamps, `02_transcribe.py`), busca 3-5 clips/imágenes relevantes según las palabras clave que ya generó Groq en el paso 1 (`03_fetch_broll.py`), y ensambla todo en un video vertical con subtítulos incrustados (`04_assemble_video.py`, MoviePy 2.x — los subtítulos se renderizan con `TextClip`, que en esta versión de MoviePy usa Pillow por dentro y **no requiere tener ImageMagick instalado**). Cada llamada externa (Groq si hace falta reintentar, Pexels/Pixabay) usa reintentos con backoff, y cada corrida queda registrada en `logs/`. 🆕
 4. Salida a carpeta `output_videos/` para revisión manual antes de subir. La ruta del video final y la fecha quedan registradas de vuelta en `history/historial_guiones.json`, junto al guion que le dio origen. 🆕
@@ -157,7 +159,14 @@ llm:
 guion:
   palabras_por_minuto: 150       # para estimar duración de narración
   duracion_objetivo_seg: [60, 90]
-  nichos: [tecnologia, programacion, videojuegos, peliculas]
+  # Solo para la rotación automática; --nicho / el campo de la webapp
+  # aceptan cualquier texto libre sin que esté acá. 🆕
+  nichos: [
+    tecnologia, programacion, videojuegos, peliculas,
+    belleza, moda, cocina, salud_bienestar, fitness,
+    finanzas_personales, viajes, mascotas, curiosidades,
+    motivacion, humor, diy_manualidades,
+  ]
 
 broll:
   proveedor: pexels              # pexels | pixabay

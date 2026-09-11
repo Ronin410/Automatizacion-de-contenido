@@ -100,14 +100,10 @@
   <h2>1. Guion</h2>
   <label for="idea">Idea puntual (opcional)</label>
   <input type="text" id="idea" placeholder="Ej: un bug clásico de C++" />
-  <label for="nicho">Nicho (opcional, si no se elige rota automático)</label>
-  <select id="nicho">
-    <option value="">Automático (rotación)</option>
-    <option value="tecnologia">Tecnología</option>
-    <option value="programacion">Programación</option>
-    <option value="videojuegos">Videojuegos</option>
-    <option value="peliculas">Películas</option>
-  </select>
+  <label for="nicho">Nicho / categoría (opcional)</label>
+  <input type="text" id="nicho" list="lista-nichos" placeholder="Dejalo vacío para rotación automática, o escribí cualquiera" />
+  <datalist id="lista-nichos"></datalist>
+  <small class="ayuda">Podés escribir el ámbito que quieras (no hace falta que esté en la lista de sugerencias).</small>
   <button id="btn-generar">Generar guiones candidatos</button>
   <div id="mensaje-generar" class="mensaje-error oculto"></div>
 </section>
@@ -149,7 +145,11 @@
 
   // recordar el token entre visitas (mismo navegador)
   $("token").value = localStorage.getItem("api_token") || "";
-  $("token").addEventListener("change", () => localStorage.setItem("api_token", token()));
+  $("token").addEventListener("change", () => {
+    localStorage.setItem("api_token", token());
+    cargarNichos();
+    recuperarEstado();
+  });
 
   async function llamar(path, opciones = {}) {
     const headers = opciones.headers || {};
@@ -327,6 +327,22 @@
     } catch (_) { /* nada que restaurar */ }
   }
 
+  async function cargarNichos() {
+    if (!token()) return;
+    try {
+      const resp = await llamar("/api/nichos");
+      const data = await resp.json();
+      const datalist = $("lista-nichos");
+      datalist.innerHTML = "";
+      (data.nichos || []).forEach((n) => {
+        const opt = document.createElement("option");
+        opt.value = n;
+        datalist.appendChild(opt);
+      });
+    } catch (_) { /* sin token válido todavía: no hay sugerencias, no pasa nada */ }
+  }
+
+  cargarNichos();
   recuperarEstado();
 
   $("btn-descargar").addEventListener("click", async () => {

@@ -16,7 +16,15 @@ llm:
 guion:
   palabras_por_minuto: 150       # para estimar duración de narración
   duracion_objetivo_seg: [60, 90]
-  nichos: [tecnologia, programacion, videojuegos, peliculas]
+  # Rotación automática cuando no se fuerza un nicho puntual. No hace falta
+  # que esté acá para poder usarlo: tanto la CLI (--nicho) como la webapp
+  # aceptan cualquier texto libre como override, sin editar este archivo.
+  nichos: [
+    tecnologia, programacion, videojuegos, peliculas,
+    belleza, moda, cocina, salud_bienestar, fitness,
+    finanzas_personales, viajes, mascotas, curiosidades,
+    motivacion, humor, diy_manualidades,
+  ]
 
 broll:
   proveedor: pexels              # pexels | pixabay
