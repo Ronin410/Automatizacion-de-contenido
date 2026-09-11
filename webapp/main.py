@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import os
 import random
 import sys
 import time
@@ -46,7 +47,10 @@ transcribe_mod = importlib.import_module("02_transcribe")
 broll_mod = importlib.import_module("03_fetch_broll")
 assemble_mod = importlib.import_module("04_assemble_video")
 
-CONFIG_PATH = BASE_DIR / "config" / "settings.yaml"
+# Localmente/Docker-compose: config/settings.yaml de siempre. En Render (y
+# PaaS similares) los "Secret Files" no admiten subcarpetas en el nombre y
+# quedan en /etc/secrets/<archivo> — ahí seteamos CONFIG_PATH a esa ruta.
+CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", str(BASE_DIR / "config" / "settings.yaml")))
 TTL_CANDIDATOS_PENDIENTES_SEG = 3600  # 1h: si generás y no elegís, se descarta
 
 logger = setup_logging(log_dir=BASE_DIR / "logs")
