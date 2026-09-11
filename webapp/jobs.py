@@ -53,6 +53,7 @@ class GestorTrabajos:
     def __init__(self, procesar_audio: Callable[[Path], Path]):
         self._procesar_audio = procesar_audio
         self._trabajos: dict[str, Trabajo] = {}
+        self._ultimo_id: str | None = None
         self._cola: queue.Queue[str] = queue.Queue()
         self._lock = threading.Lock()
         self._hilo = threading.Thread(target=self._bucle, daemon=True, name="gestor-trabajos")
@@ -62,6 +63,7 @@ class GestorTrabajos:
         job_id = uuid.uuid4().hex[:12]
         with self._lock:
             self._trabajos[job_id] = Trabajo(id=job_id, audio_path=str(audio_path))
+            self._ultimo_id = job_id
         self._cola.put(job_id)
         logger.info("Trabajo %s encolado para %s (posición en cola: %d).", job_id, audio_path, self._cola.qsize())
         return job_id
@@ -69,6 +71,11 @@ class GestorTrabajos:
     def estado(self, job_id: str) -> Trabajo | None:
         with self._lock:
             return self._trabajos.get(job_id)
+
+    def ultimo(self) -> Trabajo | None:
+        """Devuelve el trabajo más reciente (para recuperar el estado tras un refresh de página)."""
+        with self._lock:
+            return self._trabajos.get(self._ultimo_id) if self._ultimo_id else None
 
     def _actualizar(self, job_id: str, **campos) -> None:
         with self._lock:

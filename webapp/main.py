@@ -224,6 +224,35 @@ def elegir_guion(generado_id: str = Form(...), indice: int = Form(...)) -> dict:
     return {"titulo": elegido.titulo, "guion": elegido.guion, "duracion_estimada_seg": duracion}
 
 
+@app.get("/api/guiones/actual", dependencies=[Depends(verificar_token)])
+def guion_actual() -> dict:
+    """Guion elegido más reciente que todavía no tiene un video generado.
+
+    Sirve para que la página recupere el estado si refrescás o volvés más
+    tarde (por ejemplo, elegiste un guion pero todavía no grabaste el
+    audio): sin esto, ese guion "pendiente de grabar" solo vivía en el
+    estado de React/JS del navegador y se perdía al refrescar.
+    """
+    config = _config()
+    historial_ruta = BASE_DIR / (config.get("historial", {}) or {}).get(
+        "ruta", "history/historial_guiones.json"
+    )
+    entrada = ultima_entrada(historial_ruta)
+    if not entrada or entrada.get("video_path"):
+        return {"pendiente": False}
+
+    guion_path = BASE_DIR / "output" / "guion_del_dia.txt"
+    if not guion_path.exists():
+        return {"pendiente": False}
+
+    return {
+        "pendiente": True,
+        "titulo": entrada.get("titulo", ""),
+        "guion": guion_path.read_text(encoding="utf-8").strip(),
+        "duracion_estimada_seg": entrada.get("duracion_estimada_seg"),
+    }
+
+
 AUDIO_EXTENSIONES_PERMITIDAS = {".wav", ".mp3", ".m4a", ".ogg", ".flac"}
 
 
@@ -246,6 +275,17 @@ async def subir_audio(archivo: UploadFile = File(...)) -> dict:
     return {"job_id": job_id}
 
 
+@app.get("/api/procesos/actual", dependencies=[Depends(verificar_token)])
+def proceso_actual() -> dict:
+    """Último trabajo encolado (para retomarlo si refrescás la página mientras procesa)."""
+    trabajo = gestor.ultimo()
+    if trabajo is None:
+        return {"existe": False}
+    return {"existe": True, **trabajo.to_dict()}
+
+
+# OJO con el orden: esta ruta con parámetro va DESPUÉS de /api/procesos/actual,
+# si no FastAPI la matchea primero y "actual" nunca llega a la de arriba.
 @app.get("/api/procesos/{job_id}", dependencies=[Depends(verificar_token)])
 def estado_proceso(job_id: str) -> dict:
     trabajo = gestor.estado(job_id)

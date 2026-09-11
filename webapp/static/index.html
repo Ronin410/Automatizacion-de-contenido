@@ -227,12 +227,15 @@
     form.append("indice", indice);
     const resp = await llamar("/api/guiones/elegir", { method: "POST", body: form });
     const data = await resp.json();
+    mostrarElegido(data);
+    $("seccion-elegido").scrollIntoView({ behavior: "smooth" });
+  }
 
+  function mostrarElegido(data) {
     $("titulo-elegido").textContent = data.titulo + ` (~${data.duracion_estimada_seg}s)`;
     $("texto-elegido").textContent = data.guion;
     $("seccion-elegido").hidden = false;
     $("seccion-audio").hidden = false;
-    $("seccion-elegido").scrollIntoView({ behavior: "smooth" });
   }
 
   $("btn-subir").addEventListener("click", async () => {
@@ -279,20 +282,52 @@
     try {
       const resp = await llamar(`/api/procesos/${jobId}`);
       const data = await resp.json();
-      $("punto-estado").className = "punto " + data.estado;
-      $("texto-estado").textContent = TEXTOS_ESTADO[data.estado] || data.estado;
-
-      if (data.estado === "listo") {
-        clearInterval(temporizadorPoll);
-        $("btn-descargar").classList.remove("oculto");
-      } else if (data.estado === "error") {
-        clearInterval(temporizadorPoll);
-        $("texto-estado").textContent += " " + (data.error || "");
-      }
+      mostrarEstadoProceso(data);
     } catch (err) {
       $("texto-estado").textContent = "Error consultando estado: " + err.message;
     }
   }
+
+  function mostrarEstadoProceso(data) {
+    $("estado-proceso").classList.remove("oculto");
+    $("punto-estado").className = "punto " + data.estado;
+    $("texto-estado").textContent = TEXTOS_ESTADO[data.estado] || data.estado;
+
+    if (data.estado === "listo") {
+      if (temporizadorPoll) clearInterval(temporizadorPoll);
+      $("btn-descargar").classList.remove("oculto");
+    } else if (data.estado === "error") {
+      if (temporizadorPoll) clearInterval(temporizadorPoll);
+      $("texto-estado").textContent += " " + (data.error || "");
+    } else {
+      $("btn-descargar").classList.add("oculto");
+    }
+  }
+
+  // Recupera el estado al cargar/refrescar la página: un guion ya elegido
+  // que todavía no grabaste, y/o un video que quedó procesándose (o ya
+  // terminado) desde antes de refrescar.
+  async function recuperarEstado() {
+    if (!token()) return; // sin token todavía no tiene sentido intentar
+    try {
+      const respGuion = await llamar("/api/guiones/actual");
+      const guion = await respGuion.json();
+      if (guion.pendiente) mostrarElegido(guion);
+    } catch (_) { /* sin guion pendiente o token invalido: no hay nada que restaurar */ }
+
+    try {
+      const respProceso = await llamar("/api/procesos/actual");
+      const proceso = await respProceso.json();
+      if (proceso.existe) {
+        jobId = proceso.id;
+        $("seccion-audio").hidden = false;
+        mostrarEstadoProceso(proceso);
+        if (proceso.estado === "en_cola" || proceso.estado === "procesando") iniciarPolling();
+      }
+    } catch (_) { /* nada que restaurar */ }
+  }
+
+  recuperarEstado();
 
   $("btn-descargar").addEventListener("click", async () => {
     const resp = await llamar(`/api/videos/${jobId}`);
