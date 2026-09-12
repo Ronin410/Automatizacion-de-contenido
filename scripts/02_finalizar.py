@@ -24,6 +24,7 @@ sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from common.config import cargar_config  # noqa: E402
+from common.guion import keywords_para_broll  # noqa: E402
 from common.history import actualizar_ultima_entrada, ultima_entrada  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
 import common.audio_cleanup as audio_cleanup  # noqa: E402
@@ -52,11 +53,8 @@ def audio_mas_reciente(carpeta: Path) -> Path:
 
 
 def keywords_del_guion_actual(historial_ruta: Path) -> list[str]:
-    """Reusa las palabras clave que ya generó el LLM en 01_generate_script.py."""
-    entrada = ultima_entrada(historial_ruta)
-    if entrada and entrada.get("palabras_clave"):
-        return list(entrada["palabras_clave"])
-    return []
+    """Reusa las palabras clave (+ nicho) del guion elegido en 01_generate_script.py."""
+    return keywords_para_broll(ultima_entrada(historial_ruta))
 
 
 def main() -> int:

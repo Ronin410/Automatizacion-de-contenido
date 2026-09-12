@@ -26,6 +26,12 @@ logger = logging.getLogger(LOGGER_NAME)
 
 TIMEOUT_SEG = 20
 
+# Último recurso cuando una palabra clave puntual no da resultados (ej. el
+# LLM eligió un término raro, o algo con copyright que el banco de stock
+# no tiene) — "abstract background" prácticamente siempre tiene resultados
+# en Pexels/Pixabay, así una sola palabra clave floja no tira todo el video.
+KEYWORD_RESPALDO = "abstract background"
+
 
 class BrollError(Exception):
     """No se pudo obtener B-roll para ninguna de las palabras clave dadas."""
@@ -165,9 +171,16 @@ class BrollClient:
         return None
 
     def buscar_y_descargar(self, keywords: list[str], cantidad: int, destino: Path) -> list[ClipBroll]:
-        """Descarga `cantidad` clips, rotando entre `keywords` (se repiten si hacen falta más)."""
+        """Descarga `cantidad` clips, rotando entre `keywords` (se repiten si hacen falta más).
+
+        Si una palabra clave puntual no da resultados (ej. el LLM eligió un
+        término raro, o quedó algo con copyright que el banco de stock no
+        tiene), se reintenta esa misma posición con `KEYWORD_RESPALDO` en vez
+        de simplemente perder el clip — evita que el video entero falle por
+        una sola palabra clave floja.
+        """
         if not keywords:
-            keywords = ["b-roll"]
+            keywords = [KEYWORD_RESPALDO]
 
         destino = Path(destino)
         destino.mkdir(parents=True, exist_ok=True)
@@ -177,6 +190,10 @@ class BrollClient:
             query = keywords[i % len(keywords)]
             logger.info("Buscando B-roll (%d/%d) para '%s' en %s...", i + 1, cantidad, query, self._proveedor)
             resultado = self.buscar_una(query)
+            if resultado is None and query != KEYWORD_RESPALDO:
+                logger.info("Sin resultados para '%s', probando respaldo genérico '%s'...", query, KEYWORD_RESPALDO)
+                query = KEYWORD_RESPALDO
+                resultado = self.buscar_una(query)
             if resultado is None:
                 logger.warning("Sin resultados de B-roll para '%s', se omite.", query)
                 continue

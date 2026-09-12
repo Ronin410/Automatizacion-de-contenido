@@ -33,7 +33,12 @@ sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from common.config import cargar_config  # noqa: E402
-from common.guion import NICHOS_DEFAULT, elegir_nicho_por_rotacion, estimar_duracion_seg  # noqa: E402
+from common.guion import (  # noqa: E402
+    NICHOS_DEFAULT,
+    elegir_nicho_por_rotacion,
+    estimar_duracion_seg,
+    keywords_para_broll,
+)
 from common.history import actualizar_ultima_entrada, registrar_guion, temas_recientes, ultima_entrada  # noqa: E402
 from common.llm_client import GroqScriptClient, LLMResponseError  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
@@ -103,7 +108,7 @@ def _procesar_audio(audio_path: Path) -> Path:
     transcribe_mod.guardar_srt(subtitulos, BASE_DIR / "output" / "subtitulos.srt")
 
     entrada = ultima_entrada(historial_ruta)
-    keywords = list(entrada["palabras_clave"]) if entrada and entrada.get("palabras_clave") else []
+    keywords = keywords_para_broll(entrada)
 
     # Media propia primero (si subieron fotos/videos, van sí o sí); el resto de los
     # clips, hasta completar la cantidad configurada, se busca automático en Pexels/Pixabay.

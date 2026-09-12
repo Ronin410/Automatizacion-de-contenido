@@ -48,3 +48,17 @@ def elegir_nicho_por_rotacion(nichos: list[str], historial_ruta: str | Path) -> 
 def estimar_duracion_seg(texto: str, palabras_por_minuto: int) -> float:
     n_palabras = len(texto.split())
     return round((n_palabras / palabras_por_minuto) * 60, 1)
+
+
+def keywords_para_broll(entrada: dict | None) -> list[str]:
+    """Palabras clave del guion (las que eligió el LLM) + el nicho, para buscar B-roll.
+
+    El respaldo genérico ante palabras clave sin resultados (ej. un nombre de
+    marca que el banco de stock no tiene) se maneja en `BrollClient`, no acá.
+    """
+    keywords: list[str] = []
+    if entrada and entrada.get("palabras_clave"):
+        keywords.extend(entrada["palabras_clave"])
+    if entrada and entrada.get("nicho") and entrada["nicho"] not in keywords:
+        keywords.append(entrada["nicho"])
+    return keywords

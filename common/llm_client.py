@@ -64,6 +64,25 @@ Cada guion debe:
 - Durar entre 60 y 90 segundos al narrarlo a ritmo normal (aprox. 150-220 palabras).
 - No incluir indicaciones de cámara ni edición, solo el texto a narrar.
 
+Además, para cada guion generá "palabras_clave": 4 a 6 términos EN INGLÉS para
+buscar B-ROLL en un banco de fotos/videos de stock (Pexels/Pixabay). Son
+escenas u objetos concretos y filmables, NO un resumen del guion. Reglas
+importantes:
+- Priorizá el TEMA CENTRAL/objeto del video (lo que pidió el usuario o el
+  título), no conceptos que el guion solo menciona de pasada. Ejemplo: un
+  guion sobre "por qué la música de Mario Kart es hipnotizante" que de paso
+  habla de dopamina y redes neuronales debe tener palabras_clave como
+  "video game controller", "racing video game", "kids playing video games",
+  "arcade neon lights" — NO "brain", "neurons", "dopamine" como términos
+  principales, aunque se mencionen en el texto.
+- Nunca uses nombres de marcas, personajes o títulos con copyright (ej. NO
+  "Mario Kart", "Nintendo", "Mickey Mouse") — un banco de stock no tiene ese
+  material y la búsqueda no va a encontrar nada; en su lugar describí la
+  escena genérica más parecida (ej. "colorful arcade racing game screen").
+- Si el tema no tiene un objeto visual obvio, usá escenas que transmitan la
+  sensación del video (ej. para un tema abstracto de motivación: "person
+  running sunrise", "writing in journal").
+
 Respondé ÚNICAMENTE con un array JSON válido, sin texto antes ni después ni bloques de código,
 con esta forma exacta:
 [
