@@ -5,6 +5,8 @@
 > **v3** — Se agregó una webapp (`webapp/`) para poder usar el pipeline sin depender de la computadora local: pedís el guion, elegís candidato, subís el audio grabado y descargás el video, todo desde el navegador (celu incluido). Pensada para desplegarse en una VM siempre gratis (ver `docs/deploy-oracle-cloud-free-tier.md`). Ver §11.
 >
 > **v4** — Pensado para más de una persona usando el mismo pipeline con temas distintos: se ampliaron los nichos de rotación automática (de 4 a 16, cubriendo categorías bien genéricas — belleza, cocina, fitness, viajes, etc., no solo tech/gaming) y, más importante, el nicho ya no es una lista cerrada: tanto `--nicho` en la CLI como el campo de la webapp aceptan **cualquier texto libre** como categoría puntual, sin tener que estar configurado de antemano ni tocar código.
+>
+> **v5** — Dos mejoras a partir de uso real en producción (Render): (1) **media propia** — además del B-roll automático de Pexels/Pixabay, ahora se pueden subir fotos/videos propios (`assets/media_usuario/`, endpoints `/api/media/*`) para que aparezcan en el video, útil para más originalidad o cuando ya se tiene el material; se usan primero y el resto de los clips se completa automático. (2) **persistencia de trabajos**: el estado de los videos en proceso ahora se guarda a disco (`logs/jobs_estado.json`), para sobrevivir a los reinicios frecuentes de tiers gratuitos (Render reinicia el servicio por inactividad o por quedarse sin RAM); un trabajo interrumpido a medio hacer se marca con un error claro en vez de desaparecer como si nunca hubiera existido. Ver §11.
 
 ## 1. Objetivo del proyecto
 

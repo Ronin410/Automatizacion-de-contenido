@@ -26,6 +26,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from common.config import cargar_config  # noqa: E402
 from common.history import actualizar_ultima_entrada, ultima_entrada  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
+import common.media_usuario as media_usuario  # noqa: E402
 
 # Los módulos de las otras etapas empiezan con un número, así que no son
 # importables con `import 02_transcribe` (no es un identificador válido);
@@ -97,22 +98,34 @@ def main() -> int:
     keywords = keywords_del_guion_actual(historial_ruta)
     if not keywords:
         logger.warning("No hay palabras clave guardadas en el historial; se busca B-roll genérico.")
-    cantidad_min, cantidad_max = broll_cfg.get("clips_por_video", [3, 5])
-    cantidad = random.randint(int(cantidad_min), int(cantidad_max))
 
+    # Media propia primero (si hay algo en assets/media_usuario/pendiente/, se usa sí o sí);
+    # el resto de los clips, hasta completar la cantidad configurada, se busca automático.
+    clips_usuario = media_usuario.tomar_pendientes_como_clips(BASE_DIR)
+    if clips_usuario:
+        logger.info("Usando %d archivo(s) de media propia para este video.", len(clips_usuario))
+
+    cantidad_min, cantidad_max = broll_cfg.get("clips_por_video", [3, 5])
+    cantidad_total = random.randint(int(cantidad_min), int(cantidad_max))
+    cantidad_auto = max(0, cantidad_total - len(clips_usuario))
+
+    broll_auto = []
     try:
-        cliente_broll = broll_mod.BrollClient(
-            proveedor=broll_cfg.get("proveedor", "pexels"),
-            api_key=broll_cfg.get("api_key"),
-            max_reintentos=broll_cfg.get("max_reintentos", 3),
-        )
-        broll_clips = cliente_broll.buscar_y_descargar(
-            keywords, cantidad, BASE_DIR / "assets" / "broll_temp"
-        )
+        if cantidad_auto > 0:
+            cliente_broll = broll_mod.BrollClient(
+                proveedor=broll_cfg.get("proveedor", "pexels"),
+                api_key=broll_cfg.get("api_key"),
+                max_reintentos=broll_cfg.get("max_reintentos", 3),
+            )
+            broll_auto = cliente_broll.buscar_y_descargar(
+                keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp"
+            )
     except (broll_mod.BrollError, RuntimeError) as exc:
         logger.error("Falló la búsqueda de B-roll: %s", exc)
         print(f"\nNo se pudo conseguir B-roll: {exc}")
         return 1
+
+    broll_clips = clips_usuario + broll_auto
 
     # --- 3) Ensamblado ---------------------------------------------------------------------
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

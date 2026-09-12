@@ -37,6 +37,7 @@ from common.guion import NICHOS_DEFAULT, elegir_nicho_por_rotacion, estimar_dura
 from common.history import actualizar_ultima_entrada, registrar_guion, temas_recientes, ultima_entrada  # noqa: E402
 from common.llm_client import GroqScriptClient, LLMResponseError  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
+import common.media_usuario as media_usuario  # noqa: E402
 from webapp.auth import verificar_token  # noqa: E402
 from webapp.jobs import GestorTrabajos  # noqa: E402
 
@@ -94,14 +95,23 @@ def _procesar_audio(audio_path: Path) -> Path:
     entrada = ultima_entrada(historial_ruta)
     keywords = list(entrada["palabras_clave"]) if entrada and entrada.get("palabras_clave") else []
 
+    # Media propia primero (si subieron fotos/videos, van sí o sí); el resto de los
+    # clips, hasta completar la cantidad configurada, se busca automático en Pexels/Pixabay.
+    clips_usuario = media_usuario.tomar_pendientes_como_clips(BASE_DIR)
     cantidad_min, cantidad_max = broll_cfg.get("clips_por_video", [3, 5])
-    cantidad = random.randint(int(cantidad_min), int(cantidad_max))
-    cliente_broll = broll_mod.BrollClient(
-        proveedor=broll_cfg.get("proveedor", "pexels"),
-        api_key=broll_cfg.get("api_key"),
-        max_reintentos=broll_cfg.get("max_reintentos", 3),
-    )
-    broll_clips = cliente_broll.buscar_y_descargar(keywords, cantidad, BASE_DIR / "assets" / "broll_temp")
+    cantidad_total = random.randint(int(cantidad_min), int(cantidad_max))
+    cantidad_auto = max(0, cantidad_total - len(clips_usuario))
+
+    broll_auto = []
+    if cantidad_auto > 0:
+        cliente_broll = broll_mod.BrollClient(
+            proveedor=broll_cfg.get("proveedor", "pexels"),
+            api_key=broll_cfg.get("api_key"),
+            max_reintentos=broll_cfg.get("max_reintentos", 3),
+        )
+        broll_auto = cliente_broll.buscar_y_descargar(keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp")
+
+    broll_clips = clips_usuario + broll_auto
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     salida = BASE_DIR / "output_videos" / f"reel_{timestamp}.mp4"
@@ -114,7 +124,7 @@ def _procesar_audio(audio_path: Path) -> Path:
     return salida
 
 
-gestor = GestorTrabajos(procesar_audio=_procesar_audio)
+gestor = GestorTrabajos(procesar_audio=_procesar_audio, estado_path=BASE_DIR / "logs" / "jobs_estado.json")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -261,6 +271,33 @@ def guion_actual() -> dict:
     }
 
 
+@app.get("/api/media/pendiente", dependencies=[Depends(verificar_token)])
+def media_pendiente() -> dict:
+    """Fotos/videos propios ya subidos, esperando a que se arme el próximo video."""
+    return {"archivos": media_usuario.listar_pendientes(BASE_DIR)}
+
+
+@app.post("/api/media/subir", dependencies=[Depends(verificar_token)])
+async def subir_media(archivo: UploadFile = File(...)) -> dict:
+    contenido = await archivo.read()
+    try:
+        info = media_usuario.agregar_pendiente(BASE_DIR, archivo.filename or "", contenido)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return info
+
+
+@app.delete("/api/media/pendiente/{nombre}", dependencies=[Depends(verificar_token)])
+def eliminar_media_pendiente(nombre: str) -> dict:
+    try:
+        borrado = media_usuario.eliminar_pendiente(BASE_DIR, nombre)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not borrado:
+        raise HTTPException(404, "Ese archivo ya no está en la cola.")
+    return {"eliminado": True}
+
+
 AUDIO_EXTENSIONES_PERMITIDAS = {".wav", ".mp3", ".m4a", ".ogg", ".flac"}
 
 
@@ -298,7 +335,12 @@ def proceso_actual() -> dict:
 def estado_proceso(job_id: str) -> dict:
     trabajo = gestor.estado(job_id)
     if trabajo is None:
-        raise HTTPException(404, "No existe ese job_id (¿el servidor se reinició desde que lo creaste?).")
+        raise HTTPException(
+            404,
+            "No existe ese job_id. Si el servidor se reinició (común en tiers gratis con poca RAM o "
+            "por inactividad) y el disco no es persistente, el registro también se perdió — volvé a "
+            "subir el audio.",
+        )
     return trabajo.to_dict()
 
 

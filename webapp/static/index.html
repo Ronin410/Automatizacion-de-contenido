@@ -82,6 +82,11 @@
   .mensaje-error { color: var(--error); font-size: 0.85rem; margin-top: 8px; }
   .oculto { display: none; }
   small.ayuda { color: var(--texto-tenue); display: block; margin-top: 6px; }
+  .media-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 0.85rem;
+  }
+  .media-item button { width: auto; margin-top: 0; padding: 4px 10px; background: var(--error); font-size: 0.8rem; }
 </style>
 </head>
 <body>
@@ -94,6 +99,15 @@
   <label for="token">X-Api-Token</label>
   <input type="password" id="token" placeholder="Pegá tu token" />
   <small class="ayuda">Se guarda solo en este navegador (localStorage), no se manda a ningún lado más que a este servidor.</small>
+</section>
+
+<section>
+  <h2>Media propia (opcional)</h2>
+  <p class="subtitulo" style="margin-top:0">Subí fotos o clips cortos que quieras que aparezcan en el próximo video (además del B-roll automático, o en vez de una parte de él).</p>
+  <label for="archivo-media">Fotos o videos (.jpg, .png, .webp, .mp4, .mov, .webm)</label>
+  <input type="file" id="archivo-media" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.mkv,.webm,image/*,video/*" multiple />
+  <div id="lista-media"></div>
+  <div id="mensaje-media" class="mensaje-error oculto"></div>
 </section>
 
 <section id="seccion-generar">
@@ -148,6 +162,7 @@
   $("token").addEventListener("change", () => {
     localStorage.setItem("api_token", token());
     cargarNichos();
+    cargarMediaPendiente();
     recuperarEstado();
   });
 
@@ -284,6 +299,9 @@
       const data = await resp.json();
       mostrarEstadoProceso(data);
     } catch (err) {
+      if (temporizadorPoll) clearInterval(temporizadorPoll); // no tiene sentido seguir pidiendo un job_id que ya sabemos que no existe
+      $("estado-proceso").classList.remove("oculto");
+      $("punto-estado").className = "punto error";
       $("texto-estado").textContent = "Error consultando estado: " + err.message;
     }
   }
@@ -342,7 +360,60 @@
     } catch (_) { /* sin token válido todavía: no hay sugerencias, no pasa nada */ }
   }
 
+  async function cargarMediaPendiente() {
+    if (!token()) return;
+    try {
+      const resp = await llamar("/api/media/pendiente");
+      const data = await resp.json();
+      renderMediaPendiente(data.archivos || []);
+    } catch (_) { /* sin token válido todavía */ }
+  }
+
+  function renderMediaPendiente(archivos) {
+    const cont = $("lista-media");
+    cont.innerHTML = "";
+    archivos.forEach((a) => {
+      const div = document.createElement("div");
+      div.className = "media-item";
+      div.innerHTML = `<span>${a.tipo === "video" ? "🎬" : "🖼️"} ${escapeHtml(a.nombre)}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Quitar";
+      btn.addEventListener("click", () => eliminarMediaPendiente(a.nombre));
+      div.appendChild(btn);
+      cont.appendChild(div);
+    });
+  }
+
+  async function eliminarMediaPendiente(nombre) {
+    try {
+      await llamar(`/api/media/pendiente/${encodeURIComponent(nombre)}`, { method: "DELETE" });
+      cargarMediaPendiente();
+    } catch (err) {
+      $("mensaje-media").textContent = "Error: " + err.message;
+      $("mensaje-media").classList.remove("oculto");
+    }
+  }
+
+  $("archivo-media").addEventListener("change", async () => {
+    const msg = $("mensaje-media");
+    msg.classList.add("oculto");
+    const archivos = Array.from($("archivo-media").files);
+    for (const archivo of archivos) {
+      try {
+        const form = new FormData();
+        form.append("archivo", archivo);
+        await llamar("/api/media/subir", { method: "POST", body: form });
+      } catch (err) {
+        msg.textContent = `Error subiendo ${archivo.name}: ${err.message}`;
+        msg.classList.remove("oculto");
+      }
+    }
+    $("archivo-media").value = "";
+    cargarMediaPendiente();
+  });
+
   cargarNichos();
+  cargarMediaPendiente();
   recuperarEstado();
 
   $("btn-descargar").addEventListener("click", async () => {

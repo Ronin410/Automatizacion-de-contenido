@@ -13,6 +13,7 @@ services:
       - ./history:/app/history
       - ./logs:/app/logs
       - ./assets/broll_temp:/app/assets/broll_temp
+      - ./assets/media_usuario:/app/assets/media_usuario
     expose:
       - "8000"
 
