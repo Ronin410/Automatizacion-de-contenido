@@ -8,6 +8,7 @@ para probar la transcripción de un audio puntual:
 """
 from __future__ import annotations
 
+import gc
 import logging
 import sys
 from dataclasses import dataclass
@@ -52,6 +53,12 @@ def transcribir_audio(
         for s in segmentos
         if s.text.strip()
     ]
+
+    # Liberar el modelo apenas termina, antes de pasar a B-roll/MoviePy: en hosts
+    # con poca RAM (ej. el tier gratis de Render, 512MB) sumar las dos etapas sin
+    # soltar esto primero es lo que termina tirando un OOM a mitad de proceso.
+    del model
+    gc.collect()
 
     if not subtitulos:
         raise RuntimeError(

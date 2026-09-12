@@ -123,6 +123,17 @@ def ensamblar_video(
     salida = Path(salida)
     salida.parent.mkdir(parents=True, exist_ok=True)
     logger.info("Renderizando video final en %s...", salida)
-    final.write_videofile(str(salida), fps=fps, codec="libx264", audio_codec="aac", logger=None)
+    final.write_videofile(
+        str(salida),
+        fps=fps,
+        codec="libx264",
+        audio_codec="aac",
+        logger=None,
+        # "veryfast" a propósito: usa buffers de look-ahead más chicos que el
+        # default de ffmpeg (menos RAM durante el encode), además de ser más
+        # rápido — para reels de 60-90s la pérdida de compresión es despreciable.
+        preset=video_cfg.get("preset", "veryfast"),
+        threads=video_cfg.get("threads", 2),
+    )
     logger.info("Video final escrito en %s (%.1fs).", salida, final.duration)
     return salida
