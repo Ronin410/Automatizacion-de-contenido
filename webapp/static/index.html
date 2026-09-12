@@ -110,6 +110,15 @@
   <div id="mensaje-media" class="mensaje-error oculto"></div>
 </section>
 
+<section>
+  <h2>Overlays / memes (opcional)</h2>
+  <p class="subtitulo" style="margin-top:0">Imágenes o clips cortos (un meme, un avatar, un logo) que aparecen flotando en la esquina superior derecha por unos segundos, sin tapar los subtítulos.</p>
+  <label for="archivo-overlay">Fotos o videos (.jpg, .png, .webp, .mp4, .mov, .webm)</label>
+  <input type="file" id="archivo-overlay" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.mkv,.webm,image/*,video/*" multiple />
+  <div id="lista-overlays"></div>
+  <div id="mensaje-overlay" class="mensaje-error oculto"></div>
+</section>
+
 <section id="seccion-generar">
   <h2>1. Guion</h2>
   <label for="idea">Idea puntual (opcional)</label>
@@ -163,6 +172,7 @@
     localStorage.setItem("api_token", token());
     cargarNichos();
     cargarMediaPendiente();
+    cargarOverlaysPendientes();
     recuperarEstado();
   });
 
@@ -412,8 +422,62 @@
     cargarMediaPendiente();
   });
 
+  // Overlays/memes: mismo patrón que "media propia" de arriba, pero contra /api/overlays/*.
+  async function cargarOverlaysPendientes() {
+    if (!token()) return;
+    try {
+      const resp = await llamar("/api/overlays/pendiente");
+      const data = await resp.json();
+      renderOverlaysPendientes(data.archivos || []);
+    } catch (_) { /* sin token válido todavía */ }
+  }
+
+  function renderOverlaysPendientes(archivos) {
+    const cont = $("lista-overlays");
+    cont.innerHTML = "";
+    archivos.forEach((a) => {
+      const div = document.createElement("div");
+      div.className = "media-item";
+      div.innerHTML = `<span>${a.tipo === "video" ? "🎬" : "🖼️"} ${escapeHtml(a.nombre)}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Quitar";
+      btn.addEventListener("click", () => eliminarOverlayPendiente(a.nombre));
+      div.appendChild(btn);
+      cont.appendChild(div);
+    });
+  }
+
+  async function eliminarOverlayPendiente(nombre) {
+    try {
+      await llamar(`/api/overlays/pendiente/${encodeURIComponent(nombre)}`, { method: "DELETE" });
+      cargarOverlaysPendientes();
+    } catch (err) {
+      $("mensaje-overlay").textContent = "Error: " + err.message;
+      $("mensaje-overlay").classList.remove("oculto");
+    }
+  }
+
+  $("archivo-overlay").addEventListener("change", async () => {
+    const msg = $("mensaje-overlay");
+    msg.classList.add("oculto");
+    const archivos = Array.from($("archivo-overlay").files);
+    for (const archivo of archivos) {
+      try {
+        const form = new FormData();
+        form.append("archivo", archivo);
+        await llamar("/api/overlays/subir", { method: "POST", body: form });
+      } catch (err) {
+        msg.textContent = `Error subiendo ${archivo.name}: ${err.message}`;
+        msg.classList.remove("oculto");
+      }
+    }
+    $("archivo-overlay").value = "";
+    cargarOverlaysPendientes();
+  });
+
   cargarNichos();
   cargarMediaPendiente();
+  cargarOverlaysPendientes();
   recuperarEstado();
 
   $("btn-descargar").addEventListener("click", async () => {

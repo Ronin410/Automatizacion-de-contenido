@@ -14,6 +14,8 @@ services:
       - ./logs:/app/logs
       - ./assets/broll_temp:/app/assets/broll_temp
       - ./assets/media_usuario:/app/assets/media_usuario
+      - ./assets/overlays_usuario:/app/assets/overlays_usuario
+      - ./assets/musica:/app/assets/musica
     expose:
       - "8000"
 

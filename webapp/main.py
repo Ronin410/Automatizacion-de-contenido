@@ -37,7 +37,10 @@ from common.guion import NICHOS_DEFAULT, elegir_nicho_por_rotacion, estimar_dura
 from common.history import actualizar_ultima_entrada, registrar_guion, temas_recientes, ultima_entrada  # noqa: E402
 from common.llm_client import GroqScriptClient, LLMResponseError  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
+import common.audio_cleanup as audio_cleanup  # noqa: E402
 import common.media_usuario as media_usuario  # noqa: E402
+import common.musica as musica_mod  # noqa: E402
+import common.overlays as overlays_mod  # noqa: E402
 from webapp.auth import verificar_token  # noqa: E402
 from webapp.jobs import GestorTrabajos  # noqa: E402
 
@@ -79,9 +82,16 @@ def _procesar_audio(audio_path: Path) -> Path:
     whisper_cfg = config.get("whisper", {}) or {}
     broll_cfg = config.get("broll", {}) or {}
     video_cfg = config.get("video", {}) or {}
+    audio_cfg = config.get("audio", {}) or {}
+    musica_cfg = config.get("musica", {}) or {}
     historial_ruta = BASE_DIR / (config.get("historial", {}) or {}).get(
         "ruta", "history/historial_guiones.json"
     )
+
+    # Denoise + normalización antes que nada: mejora tanto la transcripción
+    # como el audio del video final. Si ffmpeg falla, sigue con el original.
+    if audio_cfg.get("limpiar", True):
+        audio_path = audio_cleanup.limpiar_audio(audio_path, BASE_DIR / "output" / "audio_limpio.wav")
 
     subtitulos = transcribe_mod.transcribir_audio(
         audio_path,
@@ -112,10 +122,17 @@ def _procesar_audio(audio_path: Path) -> Path:
         broll_auto = cliente_broll.buscar_y_descargar(keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp")
 
     broll_clips = clips_usuario + broll_auto
+    overlays_pendientes = overlays_mod.tomar_pendientes(BASE_DIR)
+    musica_path = musica_mod.elegir_pista(BASE_DIR) if musica_cfg.get("activar", True) else None
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     salida = BASE_DIR / "output_videos" / f"reel_{timestamp}.mp4"
-    assemble_mod.ensamblar_video(audio_path, subtitulos, broll_clips, salida, video_cfg)
+    assemble_mod.ensamblar_video(
+        audio_path, subtitulos, broll_clips, salida, video_cfg,
+        overlays=overlays_pendientes,
+        musica_path=musica_path,
+        musica_volumen=musica_cfg.get("volumen", 0.15),
+    )
 
     actualizar_ultima_entrada(
         historial_ruta,
@@ -291,6 +308,33 @@ async def subir_media(archivo: UploadFile = File(...)) -> dict:
 def eliminar_media_pendiente(nombre: str) -> dict:
     try:
         borrado = media_usuario.eliminar_pendiente(BASE_DIR, nombre)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not borrado:
+        raise HTTPException(404, "Ese archivo ya no está en la cola.")
+    return {"eliminado": True}
+
+
+@app.get("/api/overlays/pendiente", dependencies=[Depends(verificar_token)])
+def overlays_pendientes() -> dict:
+    """Memes/avatar/stickers ya subidos, esperando a que se arme el próximo video."""
+    return {"archivos": overlays_mod.listar_pendientes(BASE_DIR)}
+
+
+@app.post("/api/overlays/subir", dependencies=[Depends(verificar_token)])
+async def subir_overlay(archivo: UploadFile = File(...)) -> dict:
+    contenido = await archivo.read()
+    try:
+        info = overlays_mod.agregar_pendiente(BASE_DIR, archivo.filename or "", contenido)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return info
+
+
+@app.delete("/api/overlays/pendiente/{nombre}", dependencies=[Depends(verificar_token)])
+def eliminar_overlay_pendiente(nombre: str) -> dict:
+    try:
+        borrado = overlays_mod.eliminar_pendiente(BASE_DIR, nombre)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     if not borrado:

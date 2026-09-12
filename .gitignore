@@ -12,11 +12,13 @@ logs/*.log
 logs/jobs_estado.json
 output/*.txt
 output/*.srt
+output/audio_limpio.wav
 output_videos/*
 input_audio/*
 history/*.json
 assets/broll_temp/*
 assets/media_usuario/*
+assets/overlays_usuario/*
 
 !logs/.gitkeep
 !output/.gitkeep
@@ -25,3 +27,10 @@ assets/media_usuario/*
 !history/.gitkeep
 !assets/broll_temp/.gitkeep
 !assets/media_usuario/.gitkeep
+!assets/overlays_usuario/.gitkeep
+
+# Música que cada quien deja en assets/musica/ (archivos con su propia
+# licencia, no son parte del código) — se ignoran menos el LEEME
+assets/musica/*
+!assets/musica/.gitkeep
+!assets/musica/LEEME.md

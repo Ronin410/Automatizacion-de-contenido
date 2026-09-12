@@ -6,6 +6,7 @@ faster-whisper
 moviepy
 requests
 watchdog
+imageio-ffmpeg  # ya venía como dependencia de moviepy; se fija acá porque common/audio_cleanup.py lo importa directo
 
 # Fase 2 (publicación) — todavía no implementada
 # google-api-python-client

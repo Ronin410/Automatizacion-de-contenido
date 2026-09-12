@@ -43,13 +43,25 @@ video:
   ancho: 1080
   alto: 1920
   fps: 30
+  preset: veryfast                 # calidad/velocidad de ffmpeg; "medium" da mejor calidad pero usa más RAM/tiempo
+  threads: 2
+  transicion_seg: 0.4              # crossfade entre segmentos de B-roll (0 para cortes secos, como antes)
   subtitulos_estilo: simple        # simple | karaoke (fase 3)
-  fuente: null                     # ruta a un .ttf/.otf en assets/fonts/, o null para la default
+  fuente: null                     # ruta a un .ttf/.otf, o null para usar assets/fonts/BigShoulders-Bold.ttf
   tam_fuente: 64
   color_texto: white
   color_borde: black
+  subtitulo_fondo_opacidad: 0.45   # caja semitransparente detrás del texto (0 para sacarla)
+  subtitulo_pos_y: 0.78            # posición vertical relativa (0=arriba, 1=abajo)
   intro: "assets/intro_outro/intro.mp4"   # opcional; se omite si el archivo no existe
   outro: "assets/intro_outro/outro.mp4"   # opcional; se omite si el archivo no existe
+
+audio:
+  limpiar: true    # denoise + normalización de volumen (ffmpeg) antes de transcribir/ensamblar
+
+musica:
+  activar: true         # si hay algo en assets/musica/, se mezcla de fondo; si la carpeta está vacía, no hace nada
+  volumen: 0.15          # volumen relativo de la música contra la narración (0-1)
 
 historial:
   ruta: "history/historial_guiones.json"

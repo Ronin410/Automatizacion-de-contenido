@@ -26,7 +26,10 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from common.config import cargar_config  # noqa: E402
 from common.history import actualizar_ultima_entrada, ultima_entrada  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
+import common.audio_cleanup as audio_cleanup  # noqa: E402
 import common.media_usuario as media_usuario  # noqa: E402
+import common.musica as musica_mod  # noqa: E402
+import common.overlays as overlays_mod  # noqa: E402
 
 # Los módulos de las otras etapas empiezan con un número, así que no son
 # importables con `import 02_transcribe` (no es un identificador válido);
@@ -67,6 +70,8 @@ def main() -> int:
     whisper_cfg = config.get("whisper", {}) or {}
     broll_cfg = config.get("broll", {}) or {}
     video_cfg = config.get("video", {}) or {}
+    audio_cfg = config.get("audio", {}) or {}
+    musica_cfg = config.get("musica", {}) or {}
     historial_cfg = config.get("historial", {}) or {}
     historial_ruta = BASE_DIR / historial_cfg.get("ruta", "history/historial_guiones.json")
 
@@ -77,6 +82,11 @@ def main() -> int:
         print(f"\n{exc}")
         return 1
     logger.info("Usando audio más reciente: %s", audio_path)
+
+    # Denoise + normalización antes que nada: mejora tanto la transcripción
+    # como el audio del video final. Si ffmpeg falla, sigue con el original.
+    if audio_cfg.get("limpiar", True):
+        audio_path = audio_cleanup.limpiar_audio(audio_path, BASE_DIR / "output" / "audio_limpio.wav")
 
     # --- 1) Transcripción / subtítulos -------------------------------------------------
     try:
@@ -126,12 +136,19 @@ def main() -> int:
         return 1
 
     broll_clips = clips_usuario + broll_auto
+    overlays_pendientes = overlays_mod.tomar_pendientes(BASE_DIR)
+    musica_path = musica_mod.elegir_pista(BASE_DIR) if musica_cfg.get("activar", True) else None
 
     # --- 3) Ensamblado ---------------------------------------------------------------------
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     salida = BASE_DIR / "output_videos" / f"reel_{timestamp}.mp4"
     try:
-        assemble_mod.ensamblar_video(audio_path, subtitulos, broll_clips, salida, video_cfg)
+        assemble_mod.ensamblar_video(
+            audio_path, subtitulos, broll_clips, salida, video_cfg,
+            overlays=overlays_pendientes,
+            musica_path=musica_path,
+            musica_volumen=musica_cfg.get("volumen", 0.15),
+        )
     except Exception as exc:  # noqa: BLE001 - error real de MoviePy/ffmpeg, se informa y se corta
         logger.error("Falló el ensamblado del video: %s", exc)
         print(f"\nNo se pudo ensamblar el video: {exc}")
