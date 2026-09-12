@@ -1,0 +1,13 @@
+# Solo para correr esto en tu propia máquina (sin Caddy ni dominio).
+# Publica el puerto 8000 directo al host para entrar por http://localhost:8000.
+#
+# Uso: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build app
+#
+# OJO: no uses este archivo en un servidor expuesto a internet (ej. la VM de
+# Oracle Cloud) — ahí sí querés Caddy delante para tener HTTPS de verdad; sin
+# eso el token viaja sin cifrar. Para local (solo vos, en tu red de casa) es
+# perfectamente válido.
+services:
+  app:
+    ports:
+      - "8000:8000"
