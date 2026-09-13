@@ -43,6 +43,7 @@ from common.history import actualizar_ultima_entrada, registrar_guion, temas_rec
 from common.llm_client import GroqScriptClient, LLMResponseError  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
 import common.audio_cleanup as audio_cleanup  # noqa: E402
+import common.imagen_ia as imagen_ia  # noqa: E402
 import common.media_usuario as media_usuario  # noqa: E402
 import common.musica as musica_mod  # noqa: E402
 import common.overlays as overlays_mod  # noqa: E402
@@ -123,6 +124,7 @@ def _procesar_audio(audio_path: Path) -> Path:
             proveedor=broll_cfg.get("proveedor", "pexels"),
             api_key=broll_cfg.get("api_key"),
             max_reintentos=broll_cfg.get("max_reintentos", 3),
+            ratio_ia=broll_cfg.get("ratio_ia", 0.0),
         )
         broll_auto = cliente_broll.buscar_y_descargar(keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp")
 
@@ -334,6 +336,25 @@ async def subir_overlay(archivo: UploadFile = File(...)) -> dict:
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return info
+
+
+@app.post("/api/overlays/generar_ia", dependencies=[Depends(verificar_token)])
+def generar_overlay_ia(prompt: str = Form(...)) -> dict:
+    """Genera un sticker/overlay con IA a partir de una descripción y lo agrega a la cola.
+
+    Usa un servicio gratuito (Pollinations.ai), sin API key. Describí la
+    escena/estilo de forma genérica — evitá pedir personajes o marcas
+    puntuales con copyright, el resultado sería una obra derivada de esa
+    marca y la responsabilidad de qué se genera/publica es de quien lo pide.
+    """
+    prompt = prompt.strip()
+    if not prompt:
+        raise HTTPException(400, "Escribí una descripción para generar la imagen.")
+    try:
+        contenido = imagen_ia.generar_imagen(prompt, ancho=768, alto=768)
+    except Exception as exc:  # noqa: BLE001 - servicio externo gratuito, sin SLA
+        raise HTTPException(502, f"No se pudo generar la imagen: {exc}") from exc
+    return overlays_mod.agregar_pendiente(BASE_DIR, "overlay_ia.jpg", contenido)
 
 
 @app.delete("/api/overlays/pendiente/{nombre}", dependencies=[Depends(verificar_token)])

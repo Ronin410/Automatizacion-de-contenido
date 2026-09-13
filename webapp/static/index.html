@@ -115,6 +115,12 @@
   <p class="subtitulo" style="margin-top:0">Imágenes o clips cortos (un meme, un avatar, un logo) que aparecen flotando en la esquina superior derecha por unos segundos, sin tapar los subtítulos.</p>
   <label for="archivo-overlay">Fotos o videos (.jpg, .png, .webp, .mp4, .mov, .webm)</label>
   <input type="file" id="archivo-overlay" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.mkv,.webm,image/*,video/*" multiple />
+
+  <label for="prompt-overlay-ia" style="margin-top:16px">O generá un sticker con IA (gratis)</label>
+  <input type="text" id="prompt-overlay-ia" placeholder="Ej: kart de dibujos animados, colores vivos, estilo sticker" />
+  <small class="ayuda">Describí la escena/estilo de forma genérica — evitá nombres de personajes o marcas puntuales, el banco de imágenes de IA no las va a reproducir igual y el resultado sería una obra derivada de esa marca.</small>
+  <button id="btn-generar-overlay-ia" class="secundario">Generar con IA</button>
+
   <div id="lista-overlays"></div>
   <div id="mensaje-overlay" class="mensaje-error oculto"></div>
 </section>
@@ -473,6 +479,30 @@
     }
     $("archivo-overlay").value = "";
     cargarOverlaysPendientes();
+  });
+
+  $("btn-generar-overlay-ia").addEventListener("click", async () => {
+    const boton = $("btn-generar-overlay-ia");
+    const msg = $("mensaje-overlay");
+    msg.classList.add("oculto");
+    const prompt = $("prompt-overlay-ia").value.trim();
+    if (!prompt) { msg.textContent = "Escribí una descripción primero."; msg.classList.remove("oculto"); return; }
+
+    boton.disabled = true;
+    boton.textContent = "Generando (unos segundos)...";
+    try {
+      const form = new FormData();
+      form.append("prompt", prompt);
+      await llamar("/api/overlays/generar_ia", { method: "POST", body: form });
+      $("prompt-overlay-ia").value = "";
+      cargarOverlaysPendientes();
+    } catch (err) {
+      msg.textContent = "Error: " + err.message;
+      msg.classList.remove("oculto");
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Generar con IA";
+    }
   });
 
   cargarNichos();

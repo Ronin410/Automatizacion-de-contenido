@@ -124,6 +124,7 @@ def main() -> int:
                 proveedor=broll_cfg.get("proveedor", "pexels"),
                 api_key=broll_cfg.get("api_key"),
                 max_reintentos=broll_cfg.get("max_reintentos", 3),
+                ratio_ia=broll_cfg.get("ratio_ia", 0.0),
             )
             broll_auto = cliente_broll.buscar_y_descargar(
                 keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp"

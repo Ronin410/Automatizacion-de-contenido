@@ -20,6 +20,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
+import common.imagen_ia as imagen_ia  # noqa: E402
 from common.logging_config import LOGGER_NAME  # noqa: E402
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -137,12 +138,21 @@ _BUSCADORES = {
 
 
 class BrollClient:
-    def __init__(self, proveedor: str, api_key: str | None, max_reintentos: int = 3):
+    def __init__(
+        self,
+        proveedor: str,
+        api_key: str | None,
+        max_reintentos: int = 3,
+        ratio_ia: float = 0.0,
+    ):
         if proveedor not in _BUSCADORES:
             raise ValueError(f"Proveedor de B-roll desconocido: {proveedor!r} (usar 'pexels' o 'pixabay')")
         self._proveedor = proveedor
         self._api_key = _resolver_api_key(proveedor, api_key)
         self._max_reintentos = max(1, max_reintentos)
+        # 0 = nunca generar con IA (default, sin cambios de comportamiento); 1 = siempre;
+        # un valor intermedio mezcla banco de stock y generación por IA al azar.
+        self._ratio_ia = max(0.0, min(1.0, ratio_ia))
 
     def _con_reintentos(self, func, *args):
         @retry(
@@ -170,14 +180,26 @@ class BrollClient:
             return url, "imagen"
         return None
 
+    def _generar_con_ia(self, query: str, indice: int, destino: Path) -> Path | None:
+        try:
+            contenido = imagen_ia.generar_imagen(f"{query}, vibrant colors, digital art, no text")
+        except Exception as exc:  # noqa: BLE001 - la IA es un extra, no debe tumbar el video
+            logger.warning("No se pudo generar imagen con IA para '%s': %s", query, exc)
+            return None
+        ruta = destino / f"broll_ia_{indice + 1:02d}_{query.replace(' ', '_')[:40]}.jpg"
+        ruta.write_bytes(contenido)
+        return ruta
+
     def buscar_y_descargar(self, keywords: list[str], cantidad: int, destino: Path) -> list[ClipBroll]:
         """Descarga `cantidad` clips, rotando entre `keywords` (se repiten si hacen falta más).
 
-        Si una palabra clave puntual no da resultados (ej. el LLM eligió un
-        término raro, o quedó algo con copyright que el banco de stock no
-        tiene), se reintenta esa misma posición con `KEYWORD_RESPALDO` en vez
-        de simplemente perder el clip — evita que el video entero falle por
-        una sola palabra clave floja.
+        Si `ratio_ia > 0`, algunos clips se generan con IA en vez de buscarse
+        en el banco de stock (mezcla al azar). Además, si una palabra clave
+        puntual no da resultados en el banco (ej. el LLM eligió un término
+        raro, o quedó algo con copyright que el banco no tiene), se reintenta
+        esa misma posición con `KEYWORD_RESPALDO` y, si `ratio_ia > 0`, como
+        último recurso se genera una imagen con IA para esa palabra clave en
+        vez de perder el clip.
         """
         if not keywords:
             keywords = [KEYWORD_RESPALDO]
@@ -188,12 +210,26 @@ class BrollClient:
 
         for i in range(cantidad):
             query = keywords[i % len(keywords)]
+
+            if self._ratio_ia > 0 and random.random() < self._ratio_ia:
+                ruta_ia = self._generar_con_ia(query, i, destino)
+                if ruta_ia is not None:
+                    clips.append(ClipBroll(ruta_local=ruta_ia, tipo="imagen", query=query))
+                    continue
+                logger.info("Sigue con banco de stock para '%s' ya que la IA falló.", query)
+
             logger.info("Buscando B-roll (%d/%d) para '%s' en %s...", i + 1, cantidad, query, self._proveedor)
             resultado = self.buscar_una(query)
             if resultado is None and query != KEYWORD_RESPALDO:
                 logger.info("Sin resultados para '%s', probando respaldo genérico '%s'...", query, KEYWORD_RESPALDO)
                 query = KEYWORD_RESPALDO
                 resultado = self.buscar_una(query)
+            if resultado is None and self._ratio_ia > 0:
+                logger.info("Banco de stock sin resultados, generando '%s' con IA como último recurso...", query)
+                ruta_ia = self._generar_con_ia(keywords[i % len(keywords)], i, destino)
+                if ruta_ia is not None:
+                    clips.append(ClipBroll(ruta_local=ruta_ia, tipo="imagen", query=query))
+                    continue
             if resultado is None:
                 logger.warning("Sin resultados de B-roll para '%s', se omite.", query)
                 continue

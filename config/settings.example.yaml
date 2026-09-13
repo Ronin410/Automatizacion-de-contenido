@@ -31,6 +31,13 @@ broll:
   api_key: "${PEXELS_API_KEY}"   # o PIXABAY_API_KEY si proveedor: pixabay
   clips_por_video: [3, 5]
   max_reintentos: 3
+  # 0 = todo banco de stock (default, sin cambios de comportamiento).
+  # Entre 0 y 1 = esa fracción de los clips se genera con IA en vez de
+  # buscarse en el banco (útil para temas que el banco no va a tener, ej.
+  # personajes/videojuegos puntuales). 1 = siempre IA. Gratis, sin API key
+  # (Pollinations.ai) — ver common/imagen_ia.py. También se usa como último
+  # recurso si el banco de stock no encuentra nada para una palabra clave.
+  ratio_ia: 0
 
 whisper:
   modelo: small        # tiny | base | small | medium (más grande = más preciso y más lento)
