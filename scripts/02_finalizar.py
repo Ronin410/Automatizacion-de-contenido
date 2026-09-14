@@ -24,7 +24,7 @@ sys.path.insert(0, str(BASE_DIR))
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 from common.config import cargar_config  # noqa: E402
-from common.guion import keywords_para_broll  # noqa: E402
+from common.guion import keywords_para_broll, resolver_ratio_ia  # noqa: E402
 from common.history import actualizar_ultima_entrada, ultima_entrada  # noqa: E402
 from common.logging_config import setup_logging  # noqa: E402
 import common.audio_cleanup as audio_cleanup  # noqa: E402
@@ -52,9 +52,10 @@ def audio_mas_reciente(carpeta: Path) -> Path:
     return max(candidatos, key=lambda p: p.stat().st_mtime)
 
 
-def keywords_del_guion_actual(historial_ruta: Path) -> list[str]:
-    """Reusa las palabras clave (+ nicho) del guion elegido en 01_generate_script.py."""
-    return keywords_para_broll(ultima_entrada(historial_ruta))
+def guion_actual(historial_ruta: Path) -> tuple[list[str], str | None]:
+    """Reusa el guion elegido en 01_generate_script.py: sus palabras clave (+ nicho) y su nicho."""
+    entrada = ultima_entrada(historial_ruta)
+    return keywords_para_broll(entrada), (entrada or {}).get("nicho")
 
 
 def main() -> int:
@@ -103,7 +104,7 @@ def main() -> int:
     transcribe_mod.guardar_srt(subtitulos, BASE_DIR / "output" / "subtitulos.srt")
 
     # --- 2) B-roll -----------------------------------------------------------------------
-    keywords = keywords_del_guion_actual(historial_ruta)
+    keywords, nicho_actual = guion_actual(historial_ruta)
     if not keywords:
         logger.warning("No hay palabras clave guardadas en el historial; se busca B-roll genérico.")
 
@@ -124,7 +125,7 @@ def main() -> int:
                 proveedor=broll_cfg.get("proveedor", "pexels"),
                 api_key=broll_cfg.get("api_key"),
                 max_reintentos=broll_cfg.get("max_reintentos", 3),
-                ratio_ia=broll_cfg.get("ratio_ia", 0.0),
+                ratio_ia=resolver_ratio_ia(broll_cfg, nicho_actual),
             )
             broll_auto = cliente_broll.buscar_y_descargar(
                 keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp"

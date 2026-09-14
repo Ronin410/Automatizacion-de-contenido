@@ -38,6 +38,7 @@ from common.guion import (  # noqa: E402
     elegir_nicho_por_rotacion,
     estimar_duracion_seg,
     keywords_para_broll,
+    resolver_ratio_ia,
 )
 from common.history import actualizar_ultima_entrada, registrar_guion, temas_recientes, ultima_entrada  # noqa: E402
 from common.llm_client import GroqScriptClient, LLMResponseError  # noqa: E402
@@ -124,7 +125,7 @@ def _procesar_audio(audio_path: Path) -> Path:
             proveedor=broll_cfg.get("proveedor", "pexels"),
             api_key=broll_cfg.get("api_key"),
             max_reintentos=broll_cfg.get("max_reintentos", 3),
-            ratio_ia=broll_cfg.get("ratio_ia", 0.0),
+            ratio_ia=resolver_ratio_ia(broll_cfg, (entrada or {}).get("nicho")),
         )
         broll_auto = cliente_broll.buscar_y_descargar(keywords, cantidad_auto, BASE_DIR / "assets" / "broll_temp")
 

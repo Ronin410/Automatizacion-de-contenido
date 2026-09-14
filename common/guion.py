@@ -19,6 +19,7 @@ NICHOS_DEFAULT = [
     "tecnologia",
     "programacion",
     "videojuegos",
+    "anime",
     "peliculas",
     "belleza",
     "moda",
@@ -62,3 +63,19 @@ def keywords_para_broll(entrada: dict | None) -> list[str]:
     if entrada and entrada.get("nicho") and entrada["nicho"] not in keywords:
         keywords.append(entrada["nicho"])
     return keywords
+
+
+def resolver_ratio_ia(broll_cfg: dict, nicho: str | None) -> float:
+    """Fracción de clips a generar con IA (ver `common/imagen_ia.py`), según nicho.
+
+    `broll.ratio_ia` en la config es el default global. `broll.ratio_ia_por_nicho`
+    permite subirlo para nichos puntuales sin tocar el default de los demás:
+    justamente en nichos como anime/videojuegos/peliculas el banco de stock es
+    donde menos resultados da (personajes/mundos con copyright que Pexels/Pixabay
+    no tienen), así que ahí conviene un ratio más alto que el resto.
+    """
+    default = broll_cfg.get("ratio_ia", 0.0) or 0.0
+    por_nicho = broll_cfg.get("ratio_ia_por_nicho") or {}
+    if nicho and nicho in por_nicho:
+        return por_nicho[nicho]
+    return default

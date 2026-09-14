@@ -20,7 +20,7 @@ guion:
   # que esté acá para poder usarlo: tanto la CLI (--nicho) como la webapp
   # aceptan cualquier texto libre como override, sin editar este archivo.
   nichos: [
-    tecnologia, programacion, videojuegos, peliculas,
+    tecnologia, programacion, videojuegos, anime, peliculas,
     belleza, moda, cocina, salud_bienestar, fitness,
     finanzas_personales, viajes, mascotas, curiosidades,
     motivacion, humor, diy_manualidades,
@@ -38,6 +38,16 @@ broll:
   # (Pollinations.ai) — ver common/imagen_ia.py. También se usa como último
   # recurso si el banco de stock no encuentra nada para una palabra clave.
   ratio_ia: 0
+  # Override de ratio_ia por nicho (opcional). Anime/videojuegos/peliculas son
+  # justo los nichos donde Pexels/Pixabay menos tienen (personajes/mundos con
+  # copyright puntual), así que ahí conviene un ratio más alto que el default
+  # de arriba; el resto de los nichos sigue usando `ratio_ia` tal cual. Un
+  # nicho que no está en este mapa (incluido cualquiera que escribas como
+  # override libre por CLI/webapp) usa el default.
+  ratio_ia_por_nicho:
+    anime: 0.7
+    videojuegos: 0.6
+    peliculas: 0.5
 
 whisper:
   modelo: small        # tiny | base | small | medium (más grande = más preciso y más lento)

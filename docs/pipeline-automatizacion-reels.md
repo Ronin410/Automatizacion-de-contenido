@@ -168,7 +168,7 @@ guion:
   # Solo para la rotación automática; --nicho / el campo de la webapp
   # aceptan cualquier texto libre sin que esté acá. 🆕
   nichos: [
-    tecnologia, programacion, videojuegos, peliculas,
+    tecnologia, programacion, videojuegos, anime, peliculas,
     belleza, moda, cocina, salud_bienestar, fitness,
     finanzas_personales, viajes, mascotas, curiosidades,
     motivacion, humor, diy_manualidades,
@@ -178,6 +178,8 @@ broll:
   proveedor: pexels              # pexels | pixabay
   api_key: "TU_API_KEY_AQUI"
   clips_por_video: [3, 5]
+  ratio_ia: 0                    # default global, ver §13 🆕
+  ratio_ia_por_nicho: { anime: 0.7, videojuegos: 0.6, peliculas: 0.5 }  # 🆕
 
 video:
   formato: vertical               # 1080x1920
@@ -234,6 +236,7 @@ A partir de revisar el primer video real generado, se identificaron varios punto
 Motivado por un caso concreto: un video sobre "por qué la música de Mario Kart es hipnotizante" salió con B-roll de redes neuronales y gente charlando — nada de videojuegos. Ya se había ajustado el prompt del guion para que las `palabras_clave` prioricen el tema central en vez de tangentes de la narración (y estén en inglés, para más resultados en Pexels/Pixabay) — pero el problema de fondo persiste: los bancos de stock **nunca van a tener footage de un juego/personaje específico** con copyright, sin importar qué tan bien elegidas estén las palabras clave. La solución complementaria: generar imágenes originales con IA cuando el banco no alcanza.
 
 - **`common/imagen_ia.py`**: genera una imagen a partir de un prompt de texto usando [Pollinations.ai](https://pollinations.ai) — gratis, sin necesidad de cuenta ni API key. Con reintentos (es un servicio público sin SLA garantizado).
-- **B-roll mezclado** (`broll.ratio_ia` en `settings.yaml`, default `0` = sin cambios de comportamiento): una fracción de los clips se genera con IA en vez de buscarse en el banco. Además, si `ratio_ia > 0`, la IA actúa como **último recurso** cuando el banco no encuentra nada para una palabra clave puntual, en vez de quedarse con un genérico desconectado del tema.
+- **B-roll mezclado** (`broll.ratio_ia` en `settings.yaml`, default `0` = sin cambios de comportamiento): una fracción de los clips se genera con IA en vez de buscarse en el banco. Además, si el ratio efectivo es `> 0`, la IA actúa como **último recurso** cuando el banco no encuentra nada para una palabra clave puntual, en vez de quedarse con un genérico desconectado del tema.
+- **Override por nicho** (`broll.ratio_ia_por_nicho`, opcional): un mapa nicho → ratio que pisa el default de arriba para esos nichos puntuales (`common/guion.py::resolver_ratio_ia`). Anime, videojuegos y películas son justo los nichos donde el banco de stock menos tiene (personajes/mundos con copyright específico), así que el `settings.example.yaml` trae esos tres con un ratio más alto que el default global; cualquier otro nicho (incluido uno libre escrito por CLI/webapp) sigue usando `ratio_ia` tal cual. Se agregó `anime` a la rotación de nichos (`NICHOS_DEFAULT`) por el mismo motivo.
 - **Overlays generados a pedido**: botón "Generar con IA" en la sección de Overlays de la webapp (`POST /api/overlays/generar_ia`, toma un `prompt` de texto) — genera un sticker y lo agrega a la cola de overlays pendientes, igual que uno subido a mano.
 - **Sobre qué pedirle**: tanto el prompt de B-roll (armado a partir de las palabras clave del guion, que ya evitan nombres de marca) como el de overlays generan **arte original inspirado en el tema**, no una copia de un personaje/marca específica — para overlays queda a criterio del usuario qué describe. Qué tan cerca del original quede el resultado depende de qué se le pida, y la responsabilidad de qué se genera y se publica es de quien lo pide, como con cualquier herramienta de IA generativa de imágenes.
